@@ -194,15 +194,24 @@ Após a refatoração:
 10. Preencha no relatório de auditoria a matriz de conformidade arquitetural definida em `references/report-template.md`, comparando todos os componentes previstos no plano aprovado com os componentes realmente implementados. Verifique responsabilidades, integração no fluxo da aplicação e dependências entre camadas, registrando evidências e classificando cada item como `APROVADO`, `REPROVADO` ou `PENDENTE`.
 11. Informe problemas que não puderam ser corrigidos.
 
-### Critério de conclusão da Fase 3
+### Regras obrigatórias de conclusão da Fase 3
 
-A Fase 3 somente poderá ser marcada como concluída quando todos os critérios arquiteturais aprovados no plano tiverem sido atendidos e evidenciados, além dos critérios funcionais e de segurança. Para cada critério não atendido, o relatório deve registrar a evidência, a limitação e o status `pendente`.
+A conclusão da refatoração deve considerar conjuntamente os critérios funcionais, de segurança e arquiteturais, além da conformidade com o plano aprovado.
 
-Se houver qualquer critério arquitetural aprovado pendente, a Skill deve interromper a conclusão normal, apresentar a lista de pendências e solicitar autorização explícita do usuário para concluir parcialmente. Sem essa autorização, a Fase 3 permanece incompleta.
+Classifique o resultado final como:
 
-Registre os comandos utilizados e os resultados reais das verificações. Para cada endpoint testado, informe método, rota e resultado obtido. Caso não seja possível executar a aplicação ou testar algum endpoint, informe o motivo e marque a validação como pendente, sem declarar sucesso.
+- `CONCLUIDA`: todos os critérios obrigatórios foram verificados e aprovados; os componentes previstos no plano aprovado foram implementados e integrados; não existem critérios obrigatórios pendentes ou reprovados.
+- `PARCIALMENTE_CONCLUIDA`: existem critérios obrigatórios pendentes ou reprovados, mas o usuário autorizou explicitamente encerrar a execução com essas limitações documentadas.
+- `INCOMPLETA`: existem critérios obrigatórios pendentes ou reprovados e não houve autorização explícita para encerrar parcialmente; ou a implementação diverge materialmente do plano aprovado sem autorização.
 
-Nunca declare que a aplicação está funcionando sem executar as verificações correspondentes.
+Regras adicionais:
+
+1. Não utilizar a quantidade de arquivos criados, classes implementadas ou findings declarados corrigidos como prova suficiente de conclusão.
+2. Não considerar verificações não executadas como aprovadas.
+3. Registrar no relatório os critérios pendentes ou reprovados, suas evidências e os próximos passos necessários.
+4. Manter o status final consistente entre as seções I e J do relatório.
+5. Não solicitar autorização para conclusão parcial quando ainda for possível continuar as correções e validações dentro do escopo aprovado.
+6. Registre os comandos utilizados e os resultados reais das verificações. Para cada endpoint testado, informe método, rota e resultado obtido. Caso não seja possível executar a aplicação ou testar algum endpoint, informe o motivo e marque a validação como pendente, sem declarar sucesso.
 
 ### Saída esperada
 

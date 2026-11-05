@@ -623,6 +623,26 @@ Regras obrigatórias:
 
 A matriz de conformidade deve ser incluída no relatório final da Fase 3.
 
+### Verificação individual dos componentes aprovados
+
+A matriz de conformidade deve conter uma linha para cada componente ou arquivo explicitamente previsto no plano aprovado, mesmo quando a implementação agrupar responsabilidades em módulos compartilhados.
+
+Não é permitido substituir a verificação individual por linhas genéricas como `Services`, `Repositories` ou `Controllers`.
+
+Para cada componente previsto, registre:
+
+- o arquivo efetivamente implementado;
+- a responsabilidade exercida;
+- a integração no fluxo real da aplicação;
+- a evidência concreta de funcionamento;
+- a classificação `APROVADO`, `REPROVADO` ou `PENDENTE`.
+
+Quando um componente previsto não existir, registrar essa ausência. Se outro componente assumir sua responsabilidade, documentar a substituição e avaliar se representa alteração material do plano aprovado.
+
+Alterações materiais exigem nova autorização explícita antes de sua implementação. Não classificar como `APROVADO` uma substituição material não autorizada.
+
+A conclusão da Fase 3 somente poderá ser `CONCLUIDA` quando todos os componentes obrigatórios do plano aprovado estiverem implementados e verificados, ou quando eventuais substituições materiais tiverem sido explicitamente autorizadas e validadas.
+
 ### Dependências entre camadas
 
 Como referência, o fluxo pode ser:
@@ -708,6 +728,24 @@ Ao final, apresentar:
 - Classificação final de cada finding como corrigido, parcialmente corrigido ou pendente.
 
 **Nunca declarar sucesso sem evidências das verificações realizadas.**
+
+### Suficiência das evidências de validação
+
+Cada critério de aceite deve ser avaliado integralmente, com evidências concretas e compatíveis com o comportamento que pretende comprovar.
+
+Não classificar um critério como `APROVADO` quando apenas parte de suas verificações tiver sido executada.
+
+Regras obrigatórias:
+
+- Critérios compostos devem ser divididos em verificações individuais. Por exemplo, CRUD exige verificar criação, leitura, atualização e exclusão.
+- Testes de importação e compilação comprovam apenas aspectos de inicialização e sintaxe; não comprovam funcionamento dos casos de uso, isolamento transacional ou conformidade arquitetural.
+- A presença de um arquivo, classe ou função não comprova sua integração ao fluxo real da aplicação.
+- Cada evidência deve identificar o teste, comando, inspeção ou comportamento efetivamente verificado e seu resultado.
+- Verificações não executadas devem receber `PENDENTE`, nunca `APROVADO`.
+- Verificações executadas que não atendam ao resultado esperado devem receber `REPROVADO`.
+- Um critério composto somente poderá ser `APROVADO` quando todas as suas verificações obrigatórias forem aprovadas.
+
+Se houver critérios obrigatórios pendentes ou reprovados, não declarar a Fase 3 como `CONCLUIDA`. Registrar as limitações e aplicar as regras de conclusão parcial ou incompleta previstas na Skill.
 
 ---
 

@@ -360,7 +360,7 @@ O status `APROVADO` somente pode ser utilizado quando existir autorização expl
 
 Regras de preenchimento:
 
-1. Incluir todos os componentes e camadas previstos no plano arquitetural aprovado.
+1. Incluir uma linha individual para cada arquivo ou componente explicitamente previsto no plano arquitetural aprovado, identificando a camada correspondente. Não agrupar componentes distintos em entradas genéricas como `Services`, `Repositories`, `Controllers` ou `Routes`. Quando um componente previsto não existir, registrar `Não implementado` e classificar sua situação conforme as regras de conformidade. Se outro componente assumir sua responsabilidade, documentar a substituição e verificar se houve autorização para eventual alteração material do plano.
 2. Verificar se cada componente desempenha sua responsabilidade e participa do fluxo real da aplicação.
 3. Registrar evidências verificáveis, sem presumir que a existência de arquivos ou diretórios comprova conformidade.
 4. Classificar como `REPROVADO` componentes que comprovadamente não atendam ao plano aprovado.
