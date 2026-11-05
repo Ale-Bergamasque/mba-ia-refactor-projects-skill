@@ -404,7 +404,7 @@ Nenhum finding pode ser marcado como `corrigido` sem evidência funcional, de se
 
 ### Conclusão da Fase 3 — Refatoração
 
-**Status final:** [CONCLUIDA / PARCIALMENTE_CONCLUIDA / INCOMPLETA]
+**Status final:** [NÃO_INICIADA / CONCLUIDA / PARCIALMENTE_CONCLUIDA / INCOMPLETA]
 
 **Resumo da implementação:** [Descrever objetivamente o que foi implementado e validado.]
 
@@ -422,6 +422,7 @@ Nenhum finding pode ser marcado como `corrigido` sem evidência funcional, de se
 
 #### Regras para determinar o status final
 
+- `NÃO_INICIADA`: a Fase 3 ainda não foi autorizada e nenhuma refatoração foi executada. Esse é o status obrigatório ao gerar o relatório na Fase 2, enquanto o plano arquitetural estiver `AGUARDANDO_APROVACAO`. A ausência de autorização não caracteriza execução incompleta.
 - `CONCLUIDA`: todos os critérios funcionais, de segurança e arquiteturais previstos no plano aprovado foram atendidos e possuem evidências reais. Não existem critérios reprovados ou pendentes.
 - `PARCIALMENTE_CONCLUIDA`: parte das alterações foi implementada, mas ainda existem critérios reprovados ou pendentes. Esse status somente pode ser utilizado quando o usuário autorizar explicitamente a conclusão parcial, conforme as regras do `SKILL.md`.
 - `INCOMPLETA`: existem alterações ou verificações pendentes e não houve autorização para considerar a execução parcialmente concluída, ou a implementação não atende às condições de conclusão.
@@ -431,6 +432,8 @@ A existência de arquivos, classes, diretórios ou testes executados não compro
 Não declarar a Fase 3 como `CONCLUIDA` quando houver divergências não autorizadas, critérios reprovados, critérios pendentes ou ausência de evidências necessárias.
 
 O status final deve ser fundamentado nas matrizes de conformidade, nos critérios de aceite e nos resultados reais das verificações.
+
+As classificações `CONCLUIDA`, `PARCIALMENTE_CONCLUIDA` e `INCOMPLETA` aplicam-se somente após o início autorizado da Fase 3. Enquanto estiver `NÃO_INICIADA`, os campos de implementação e validação devem indicar "Não executado — aguardando autorização", sem apresentar resultados fictícios.
 
 ---
 

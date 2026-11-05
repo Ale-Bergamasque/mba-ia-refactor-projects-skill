@@ -478,7 +478,7 @@ Sequência recomendada:
 
 Sempre que possível, preservar nomes públicos, caminhos de endpoints, formatos de resposta e contratos existentes.
 
-Se uma alteração exigir mudança de contrato, comunicar e justificar antes de executá-la.
+Se uma alteração exigir mudança de contrato ou comportamento existente, documente a necessidade, o impacto e a justificativa, e solicite autorização explícita do usuário antes de executá-la. Mudanças de segurança também devem seguir essa regra. Não considere a aprovação genérica da Fase 3 como autorização para alterações de contrato que não estejam previstas no plano aprovado.
 
 ---
 

@@ -200,6 +200,7 @@ A conclusão da refatoração deve considerar conjuntamente os critérios funcio
 
 Classifique o resultado final como:
 
+- `NÃO_INICIADA`: a Fase 3 ainda não recebeu autorização explícita e nenhuma refatoração foi executada. Este status deve constar no relatório gerado na Fase 2 enquanto o plano arquitetural estiver `AGUARDANDO_APROVACAO`. Não classifique a ausência de autorização como execução incompleta.
 - `CONCLUIDA`: todos os critérios obrigatórios foram verificados e aprovados; os componentes previstos no plano aprovado foram implementados e integrados; não existem critérios obrigatórios pendentes ou reprovados.
 - `PARCIALMENTE_CONCLUIDA`: existem critérios obrigatórios pendentes ou reprovados, mas o usuário autorizou explicitamente encerrar a execução com essas limitações documentadas.
 - `INCOMPLETA`: existem critérios obrigatórios pendentes ou reprovados e não houve autorização explícita para encerrar parcialmente; ou a implementação diverge materialmente do plano aprovado sem autorização.
