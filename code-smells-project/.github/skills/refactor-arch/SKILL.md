@@ -86,7 +86,10 @@ Identificar e classificar os anti-patterns e code smells encontrados no projeto.
     - as dependências permitidas entre as camadas;
     - os findings relacionados a cada mudança arquitetural;
     - os critérios de aceite funcionais, de segurança e arquiteturais;
-    - a justificativa para qualquer camada não aplicável ou que não será implementada.
+    - a justificativa para qualquer camada não aplicável ou que não será implementada;
+    - a identificação individual dos componentes e arquivos previstos, com responsabilidades, dependências e critérios de aceite verificáveis, evitando referências genéricas como `controllers/*`, `services/*` ou `repositories/*` na matriz de implementação;
+    - uma solução recomendada para cada mudança de segurança, contrato ou comportamento existente, com justificativa e impacto;
+    - a identificação explícita das decisões pendentes por falta de requisitos, que não poderão ser executadas sem autorização específica, mesmo após aprovação geral da Fase 3.
 11. Inclua a proposta arquitetural no relatório de auditoria, identificando-a como `AGUARDANDO_APROVACAO`.
 12. Não implemente a proposta nesta fase. A implementação somente poderá ocorrer após autorização explícita do usuário.
 
