@@ -1,83 +1,75 @@
 # Relatório de Auditoria Arquitetural — code-smells-project
 
-## 1. Objetivo
-
-Este relatório registra a análise arquitetural e a auditoria realizadas nas Fases 1 e 2 da Skill `refactor-arch`. A análise foi baseada nos arquivos do projeto e no catálogo de anti-patterns fornecido pela Skill. Nenhum arquivo-fonte da aplicação foi alterado.
-
 ## A. Identificação do projeto
 
 | Campo | Informação |
 | --- | --- |
 | Projeto | code-smells-project |
-| Linguagem | Python; versão não declarada no projeto |
+| Linguagem | Python 3.x; a versão exata não está declarada nos arquivos analisados |
 | Framework | Flask 3.1.1 |
-| Dependências principais | `flask==3.1.1`, `flask-cors==5.0.1` |
-| Banco de dados | SQLite, arquivo `loja.db`, criado em `database.py` |
-| Arquitetura atual | Monolítica parcialmente organizada por módulos; não há separação real entre controllers, serviços e persistência |
-| Arquitetura desejada | MVC adaptado à API Flask |
-| Escopo analisado | `app.py`, `controllers.py`, `models.py`, `database.py`, `requirements.txt`, `README.md` |
+| Banco de dados | SQLite, acessado diretamente pelo módulo `database.py` |
+| Arquitetura atual | Aplicação monolítica parcialmente organizada por módulos; não há separação efetiva entre Controllers, Services e Repositories |
+| Arquitetura desejada | MVC adaptado à tecnologia |
+| Escopo analisado | `app.py`, `controllers.py`, `models.py`, `database.py`, `README.md` e `requirements.txt`; arquivos gerados em `__pycache__` foram excluídos |
 | Data da auditoria | 2026-11-05 |
 
 ### Resumo da arquitetura atual
 
-`app.py` configura o Flask, registra rotas, expõe rotas administrativas e inicializa o banco. `controllers.py` contém handlers HTTP, validações, regras de negócio, notificações simuladas e tratamento de exceções. `models.py` concentra acesso direto ao SQLite, montagem de SQL, regras de pedidos e relatórios. `database.py` cria o esquema, mantém uma conexão global e insere dados iniciais.
+`app.py` cria a aplicação Flask, registra rotas, configura o ambiente e contém endpoints administrativos. `controllers.py` mistura leitura da requisição, validação, regras de negócio, persistência indireta, notificações e formatação das respostas. `models.py` concentra consultas SQL, persistência e parte significativa das regras de pedidos e relatórios. `database.py` mantém uma conexão global, cria o schema e insere dados iniciais.
 
-Há uma separação nominal entre `controllers.py` e `models.py`, mas não há uma camada de serviços, repositórios ou autenticação/autorização. A aplicação é um monólito simples com acoplamento direto entre Flask, controllers e SQLite.
+Há uma separação nominal entre aplicação, controllers, models e banco, mas os controllers dependem diretamente de `models` e `database`, e os models acumulam responsabilidades de Repository e Service. Não foram encontrados Services, Repositories, autenticação/autorização ou tratamento de erros centralizado.
 
 ### Limitações da análise
 
-- Não há arquivo de versão do Python nem arquivo de lock de dependências.
-- Não foram encontrados testes automatizados no escopo analisado.
-- Não foi executada a aplicação nem feita varredura externa de vulnerabilidades de dependências nesta fase.
-- A confirmação de APIs deprecated ficou limitada à inspeção do código e das versões declaradas; não foi confirmada nenhuma ocorrência.
+Não foram encontrados testes automatizados, arquivo de configuração de runtime ou documentação de ambiente além do README. A versão exata do Python não está declarada. A confirmação de APIs deprecated e de vulnerabilidades de dependências exigiria consulta ao ambiente instalado e às fontes oficiais correspondentes; por isso não foram classificados findings confirmados nessa categoria.
 
 ## B. Resumo executivo
 
-Foram confirmados cinco riscos CRITICAL, incluindo uma chave secreta hardcoded, SQL Injection, execução arbitrária de SQL, ausência de autenticação/autorização em rotas sensíveis e armazenamento/exposição de senhas em texto puro. As ocorrências foram agrupadas para que a mesma evidência não seja contada em mais de um finding; riscos relacionados são mantidos separados somente quando representam causas ou impactos distintos.
+A aplicação contém riscos críticos de segurança: credenciais e senhas em texto puro, exposição de dados sensíveis, consultas SQL construídas por concatenação, um endpoint que executa SQL arbitrário e rotas administrativas sem autenticação/autorização demonstrada. Esses problemas podem permitir alteração, exclusão ou leitura não autorizada de dados.
 
-Também foram identificados problemas HIGH de configuração e exposição de informações, estado global mutável e concentração de responsabilidades nos controllers. Há problemas MEDIUM de consultas N+1, validação insuficiente e tratamento genérico de exceções, além de problemas LOW de valores mágicos e métodos extensos.
-
-A refatoração deve priorizar a remoção de SQL construído por concatenação, o bloqueio das rotas administrativas, o hash das senhas e a retirada de segredos/debug das respostas e configurações. A reorganização MVC deve preservar os endpoints e contratos existentes, salvo mudanças de segurança explicitamente aprovadas.
+Também há forte concentração de responsabilidades em `controllers.py` e `models.py`, estado global de banco, ausência de controle transacional explícito no fluxo de pedidos, consultas N+1 e tratamento genérico de exceções. Recomenda-se priorizar a remoção dos endpoints administrativos inseguros ou sua proteção, parametrizar todas as consultas, migrar senhas para hash seguro e implementar as camadas MVC aprovadas antes de otimizações menores.
 
 ### Quantidade de findings
 
 | Severidade | Quantidade |
 | --- | ---: |
-| CRITICAL | 5 |
-| HIGH | 4 |
+| CRITICAL | 6 |
+| HIGH | 5 |
 | MEDIUM | 3 |
-| LOW | 2 |
-| **Total** | **14** |
+| LOW | 1 |
+| **Total** | **15** |
 
 ### Prioridades recomendadas
 
-1. Eliminar execução arbitrária e SQL Injection, protegendo a integridade do banco.
-2. Implementar autenticação/autorização, remover segredos hardcoded e proteger senhas.
-3. Separar regras de negócio e persistência, corrigir transações/consultas e centralizar erros.
+1. Remover ou restringir o SQL arbitrário, parametrizar consultas e implementar autenticação/autorização.
+2. Retirar credenciais do código, aplicar hash seguro às senhas e remover dados sensíveis das respostas.
+3. Separar Controllers, Services e Repositories, além de tornar o fluxo de pedidos transacional.
 
 ## C. Findings confirmados
 
-### F-001 — Chave secreta hardcoded
+### F-001 — Credenciais hardcoded
 
 **Severidade:** CRITICAL  
 **Categoria:** Segurança  
 **Localização:**
 
-- Arquivo: `app.py`
+- Arquivo: `code-smells-project/app.py`
 - Linha(s): 7
+- Arquivo: `code-smells-project/database.py`
+- Linha(s): 75-78
 
-**Evidência:** O código define a `SECRET_KEY` com valor literal em `app.py:7`.
+**Evidência:** A chave secreta da aplicação e credenciais de usuários de exemplo estão declaradas diretamente no código-fonte versionado. Os valores não são reproduzidos neste relatório.
 
-**Descrição do problema:** A chave secreta da aplicação é armazenada diretamente no código versionado.
+**Descrição do problema:** Segredos e credenciais não são obtidos de variáveis de ambiente ou de um gerenciador de segredos.
 
-**Impacto:** Exposição da chave da aplicação, que pode ser reutilizada por qualquer pessoa com acesso ao código.
+**Impacto:** Exposição do repositório pode permitir falsificação de sessão ou acesso às contas/secrets associados.
 
-**Recomendação:** Usar variáveis de ambiente ou um gerenciador de segredos; remover a chave do código e rotacioná-la caso tenha sido exposta.
+**Recomendação:** Externalizar configurações sensíveis, remover valores versionados e rotacionar credenciais que tenham sido expostas.
 
-**Justificativa da severidade:** A exposição é direta e afeta autenticação/configuração sensível.
+**Justificativa da severidade:** A evidência mostra valores de segredo e credenciais concretos no código.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Verificar se a chave já foi publicada em repositório ou ambientes compartilhados.
+**Validação adicional necessária:** Rotacionar credenciais e verificar histórico do repositório.
 
 ### F-002 — SQL Injection por concatenação de entrada
 
@@ -85,21 +77,21 @@ A refatoração deve priorizar a remoção de SQL construído por concatenação
 **Categoria:** Segurança  
 **Localização:**
 
-- Arquivo: `models.py`
-- Linha(s): 28, 47-50, 57-60, 68, 92, 110, 127-129, 140, 148-163, 174, 188, 192, 220, 224, 279, 299-304
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 28, 47-51, 57-62, 68, 92, 109-110, 126-128, 140, 149-164, 174, 188, 192, 220, 224, 280, 289-299
 
-**Evidência:** Consultas são montadas com concatenação de parâmetros como `email`, `senha`, `nome`, `termo`, `categoria` e identificadores antes de `cursor.execute`.
+**Evidência:** Valores de IDs, credenciais, campos de produto, status, filtros de busca e itens do pedido são concatenados em strings SQL antes de `cursor.execute`.
 
-**Descrição do problema:** Dados controláveis por requisições são incorporados diretamente ao SQL, sem placeholders.
+**Descrição do problema:** Dados controláveis pela requisição podem alterar a estrutura das consultas.
 
-**Impacto:** Um atacante pode alterar a semântica das consultas, consultar dados indevidos, modificar registros ou excluir dados.
+**Impacto:** Leitura, alteração ou exclusão não autorizada de registros e comprometimento da integridade do banco.
 
-**Recomendação:** Usar consultas parametrizadas (`?` no SQLite) em todas as operações e validar tipos/formas de entrada nas camadas apropriadas.
+**Recomendação:** Usar parâmetros `?` em todas as consultas, validar tipos e manter a montagem de filtros com uma lista de parâmetros.
 
-**Justificativa da severidade:** Há entradas HTTP que alcançam diretamente consultas SQL construídas por concatenação.
+**Justificativa da severidade:** Há múltiplos fluxos HTTP que alcançam consultas concatenadas, incluindo login, escrita e busca.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Criar testes de regressão para entradas com aspas, curingas e tentativas de alteração de consulta.
+**Validação adicional necessária:** Testes negativos com entradas SQL após a correção.
 
 ### F-003 — Execução arbitrária de SQL
 
@@ -107,387 +99,422 @@ A refatoração deve priorizar a remoção de SQL construído por concatenação
 **Categoria:** Segurança  
 **Localização:**
 
-- Arquivo: `app.py`
+- Arquivo: `code-smells-project/app.py`
 - Linha(s): 59-79
 
-**Evidência:** A rota `POST /admin/query` lê `dados["sql"]` e executa o conteúdo diretamente com `cursor.execute(query)`.
+**Evidência:** O endpoint `POST /admin/query` lê `dados["sql"]` e executa o conteúdo diretamente com `cursor.execute(query)`.
 
-**Descrição do problema:** O cliente escolhe o comando SQL completo que será executado.
+**Descrição do problema:** O cliente escolhe o comando SQL completo, sem whitelist, autorização ou restrição de operação.
 
-**Impacto:** Leitura, alteração ou exclusão arbitrária de dados e possível comprometimento total do banco.
+**Impacto:** Qualquer consumidor da rota pode consultar, modificar ou apagar dados fora das regras da aplicação.
 
-**Recomendação:** Remover a rota; expor somente operações de negócio específicas, com autenticação/autorização e consultas parametrizadas.
+**Recomendação:** Remover a rota; se houver necessidade administrativa, criar operações específicas, autenticadas e autorizadas.
 
-**Justificativa da severidade:** O endpoint oferece uma capacidade destrutiva e irrestrita por design.
+**Justificativa da severidade:** O risco é demonstrado diretamente pelo contrato do endpoint.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Verificar consumidores legítimos antes de remover o endpoint.
+**Validação adicional necessária:** Confirmar consumidores legítimos antes de remover o contrato.
 
-### F-004 — Ausência de autenticação e autorização
+### F-004 — Falhas de autenticação e autorização
 
 **Severidade:** CRITICAL  
 **Categoria:** Segurança  
 **Localização:**
 
-- Arquivo: `app.py`
-- Linha(s): 11-29, 47-56
+- Arquivo: `code-smells-project/app.py`
+- Linha(s): 10-29, 47-79
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 25-63, 66-110, 148-218, 234-259
 
-**Evidência:** As rotas de criação, atualização, exclusão, alteração de status e `/admin/reset-db` são registradas sem middleware ou verificação de usuário/permissão. A execução arbitrária de SQL em `/admin/query` é tratada separadamente em F-003.
+**Evidência:** Rotas de criação, atualização, exclusão, alteração de status, relatórios e administração são registradas sem middleware ou verificação de usuário/permissão. O login apenas consulta credenciais e não cria uma sessão/token verificável.
 
-**Descrição do problema:** O endpoint `/login` existe, mas não há mecanismo que proteja as demais operações ou valide propriedade/administrador.
+**Descrição do problema:** Não há mecanismo demonstrado para autenticar o chamador ou autorizar operações por papel e propriedade do recurso.
 
-**Impacto:** Usuários anônimos podem operar sobre produtos, usuários, pedidos e banco; dados de outros usuários podem ser consultados ou alterados.
+**Impacto:** Usuários não autenticados podem alterar dados, acessar relatórios e executar operações administrativas.
 
-**Recomendação:** Implementar autenticação, autorização por papel e verificação de propriedade, protegendo especialmente rotas administrativas e mutações.
+**Recomendação:** Definir autenticação, autorização por papel e verificação de propriedade; proteger rotas administrativas e operações de escrita.
 
-**Justificativa da severidade:** Operações destrutivas e administrativas estão acessíveis sem controle de acesso observável.
+**Justificativa da severidade:** A ausência é observável em todas as rotas protegidas analisadas e inclui operações destrutivas.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Confirmar se existe algum controle externo no ambiente de implantação.
+**Validação adicional necessária:** Mapear os clientes e o contrato de autenticação esperado.
 
-### F-005 — Senhas armazenadas e expostas em texto puro
+### F-005 — Armazenamento e exposição insegura de senhas
 
 **Severidade:** CRITICAL  
 **Categoria:** Segurança  
 **Localização:**
 
-- Arquivo: `database.py`
-- Linha(s): 31-34, 76-81
-- Arquivo: `models.py`
-- Linha(s): 83-101, 105-120
+- Arquivo: `code-smells-project/database.py`
+- Linha(s): 75-81
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 75-100, 105-128
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 143-183
 
-**Evidência:** A coluna `usuarios.senha` armazena a senha diretamente; `get_todos_usuarios` e `get_usuario_por_id` incluem `senha` nas respostas.
+**Evidência:** Senhas são persistidas e comparadas em texto puro; `get_todos_usuarios` e `get_usuario_por_id` incluem o campo `senha` nas respostas.
 
-**Descrição do problema:** Senhas não são transformadas em hash e podem ser retornadas pela API.
+**Descrição do problema:** O banco e a API tratam senha como dado recuperável, em vez de armazenar hash seguro e retornar apenas dados não sensíveis.
 
-**Impacto:** Um vazamento do banco ou uma chamada aos endpoints de usuários expõe credenciais reutilizáveis.
+**Impacto:** Vazamento do banco ou da API expõe credenciais reutilizáveis.
 
-**Recomendação:** Usar Argon2id, bcrypt ou PBKDF2 via biblioteca apropriada, migrar dados existentes e nunca retornar senha ou hash em respostas.
+**Recomendação:** Migrar para `werkzeug.security` ou Argon2id/bcrypt, remover senha das serializações e planejar migração das contas existentes.
 
-**Justificativa da severidade:** O problema combina armazenamento inseguro com exposição por API.
+**Justificativa da severidade:** O armazenamento em texto puro e a exposição HTTP são confirmados.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Verificar se o banco de desenvolvimento foi compartilhado e planejar rotação das credenciais.
+**Validação adicional necessária:** Planejar invalidação/rotação das credenciais atuais.
 
-### F-006 — Configuração de debug e informações internas expostas
+### F-006 — God Method e concentração de responsabilidades em `models.py`
+
+**Severidade:** CRITICAL  
+**Categoria:** Arquitetura  
+**Localização:**
+
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 133-169
+
+**Evidência:** `criar_pedido` valida estoque, calcula total, cria pedido e itens, atualiza estoque e confirma a transação em uma única função.
+
+**Descrição do problema:** Persistência, regras de negócio e coordenação do caso de uso estão misturadas.
+
+**Impacto:** Mudanças no checkout exigem alterar código de acesso a dados e dificultam testes isolados.
+
+**Recomendação:** Extrair um Service de pedidos e Repositories para produtos/pedidos, mantendo Models como entidades/dados.
+
+**Justificativa da severidade:** O método concentra o fluxo de negócio mais sensível e operações de múltiplas tabelas.
+
+**Situação da evidência:** Confirmado por análise do código.  
+**Validação adicional necessária:** Cobertura de casos de estoque, itens inválidos e rollback.
+
+### F-007 — Global Mutable State
+
+**Severidade:** HIGH  
+**Categoria:** Arquitetura / Confiabilidade  
+**Localização:**
+
+- Arquivo: `code-smells-project/database.py`
+- Linha(s): 4-8
+
+**Evidência:** `db_connection` é uma conexão global, inicializada sob demanda e compartilhada entre requisições com `check_same_thread=False`.
+
+**Descrição do problema:** O ciclo de vida e o isolamento da conexão não são controlados por contexto de aplicação ou requisição.
+
+**Impacto:** Condições de concorrência, conexões stale e comportamento difícil de testar ou reproduzir.
+
+**Recomendação:** Usar conexão por contexto de requisição, fechamento no teardown e transações explícitas.
+
+**Justificativa da severidade:** O estado é mutável e compartilhado em uma API que pode atender requisições concorrentes.
+
+**Situação da evidência:** Confirmado por análise do código.  
+**Validação adicional necessária:** Teste concorrente e verificação do ciclo de vida esperado.
+
+### F-008 — Configuração insegura e exposição de informações
 
 **Severidade:** HIGH  
 **Categoria:** Segurança / Configuração  
 **Localização:**
 
-- Arquivo: `app.py`
-- Linha(s): 8, 102
-- Arquivo: `controllers.py`
-- Linha(s): 276-289
+- Arquivo: `code-smells-project/app.py`
+- Linha(s): 8
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 284-288, 290-292
 
-**Evidência:** `DEBUG` está fixado como `True`; a resposta de `/health` inclui `db_path` e `debug`. A chave hardcoded é tratada separadamente em F-001.
+**Evidência:** Debug é habilitado, o health check expõe caminho do banco, estado de debug e chave secreta, e handlers retornam `str(e)` diretamente.
 
-**Descrição do problema:** Configuração de desenvolvimento e detalhes internos são expostos como comportamento de produção.
+**Descrição do problema:** A API divulga informações internas e detalhes de exceções, enquanto a configuração não separa desenvolvimento de produção.
 
-**Impacto:** Pode haver exposição de detalhes de execução úteis para exploração; debug pode revelar informações adicionais em erros.
+**Impacto:** Facilita reconhecimento do ambiente e pode revelar dados sensíveis em falhas.
 
-**Recomendação:** Configurar por ambiente, desabilitar debug em produção e restringir o health check a informações operacionais não sensíveis.
+**Recomendação:** Configurar por ambiente, remover segredos do health check, usar respostas genéricas e registrar detalhes apenas no servidor.
 
-**Justificativa da severidade:** A exposição é acessível por endpoint público e inclui material sensível.
-
-**Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Confirmar o ambiente de implantação.
-
-### F-007 — Estado global mutável para conexão SQLite
-
-**Severidade:** HIGH  
-**Categoria:** Arquitetura / Concorrência  
-**Localização:**
-
-- Arquivo: `database.py`
-- Linha(s): 4, 8-10
-
-**Evidência:** `db_connection` é global, inicializado uma vez e compartilhado com `check_same_thread=False`.
-
-**Descrição do problema:** A conexão é compartilhada entre requisições e threads sem gerenciamento explícito de ciclo de vida ou isolamento.
-
-**Impacto:** Risco de condições de corrida, interferência entre requisições e falhas difíceis de reproduzir.
-
-**Recomendação:** Usar conexão por contexto/requisição, fechamento controlado e transações explícitas; avaliar um mecanismo adequado ao modelo de implantação.
-
-**Justificativa da severidade:** O estado compartilhado afeta todas as operações de persistência concorrentes.
+**Justificativa da severidade:** A exposição de informação interna é observável no endpoint público.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Teste de concorrência em ambiente representativo.
+**Validação adicional necessária:** Confirmar o ambiente de implantação para definir a política de debug.
 
-### F-008 — Fat Controller
+### F-009 — Fat Controller
 
 **Severidade:** HIGH  
 **Categoria:** Arquitetura / Qualidade  
 **Localização:**
 
-- Arquivo: `controllers.py`
-- Linha(s): 24-108, 146-220, 237-291
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 1-292
 
-**Evidência:** Handlers fazem parsing e validação, aplicam regras de negócio, chamam persistência, imprimem notificações e formatam respostas HTTP.
+**Evidência:** O módulo contém handlers de produtos, usuários, login, pedidos, notificações, relatórios e health check, cada um combinando HTTP, validação, regras e logging.
 
-**Descrição do problema:** Controllers concentram responsabilidades de apresentação, negócio, integração e tratamento de erro.
+**Descrição do problema:** O controller funciona como camada de transporte, service e parte da apresentação ao mesmo tempo.
 
-**Impacto:** Testes isolados ficam difíceis e mudanças no domínio ficam acopladas ao Flask.
+**Impacto:** Alto acoplamento, duplicação de validações e dificuldade para testar regras sem Flask.
 
-**Recomendação:** Manter controllers como coordenadores; extrair validações/regras para services, persistência para repositories/models e notificações para componentes próprios.
+**Recomendação:** Controllers devem apenas traduzir HTTP; mover casos de uso para Services e serialização/validação para componentes próprios.
 
-**Justificativa da severidade:** A concentração é transversal aos principais fluxos de produtos, usuários e pedidos.
+**Justificativa da severidade:** O módulo concentra todos os domínios da API e possui quase 300 linhas com responsabilidades distintas.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Mapear contratos atuais antes de extrair componentes.
+**Validação adicional necessária:** Mapear contratos atuais antes de extrair cada caso de uso.
 
-### F-009 — Falta de controle transacional no fluxo de pedido
+### F-010 — Tight Coupling entre Controllers, Models e banco
 
 **Severidade:** HIGH  
-**Categoria:** Integridade / Arquitetura  
+**Categoria:** Arquitetura  
 **Localização:**
 
-- Arquivo: `models.py`
-- Linha(s): 133-168
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 1-3, 266-291
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 1-2
 
-**Evidência:** `criar_pedido` faz várias leituras e escritas e só faz `commit` ao final; não há rollback explícito no fluxo de erro nem proteção contra concorrência na atualização do estoque.
+**Evidência:** Controllers importam diretamente `models` e `get_db`; o módulo de models acessa a conexão e SQL diretamente.
 
-**Descrição do problema:** O fluxo possui um `commit` único, mas não explicita o tratamento de falhas da unidade de trabalho nem protege a atualização concorrente do estoque. O finding não afirma ausência completa de transação.
+**Descrição do problema:** Não existe uma fronteira de persistência que permita substituir o banco ou testar regras sem infraestrutura.
 
-**Impacto:** Falhas ou concorrência podem produzir inconsistências, pedidos parciais ou estoque incorreto.
+**Impacto:** Alterações de banco propagam-se para handlers e regras, aumentando risco de regressões.
 
-**Recomendação:** Tornar explícitos rollback e tratamento de falhas, validar todos os itens antes das escritas e atualizar estoque de forma atômica com verificação de quantidade e controle de concorrência.
+**Recomendação:** Introduzir Repositories e injetar dependências; Services não devem depender de `request`, `jsonify` ou conexão global.
 
-**Justificativa da severidade:** O fluxo altera múltiplas tabelas e afeta diretamente a integridade financeira e de estoque; o risco decorre do tratamento incompleto de falhas e da concorrência, não da ausência completa de transação.
+**Justificativa da severidade:** O acoplamento é estrutural e atravessa todos os endpoints.
 
-**Situação da evidência:** Confirmado por análise estrutural do código.  
-**Validação adicional necessária:** Testes de falha no meio da operação e concorrência.
+**Situação da evidência:** Confirmado por análise do código.  
+**Validação adicional necessária:** Testes de contrato antes da extração.
 
-### F-010 — N+1 queries ao carregar pedidos
+### F-011 — Ausência de controle transacional e concorrência no pedido
+
+**Severidade:** HIGH  
+**Categoria:** Integridade / Desempenho  
+**Localização:**
+
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 133-169
+
+**Evidência:** O estoque é verificado em consultas separadas e decrementado posteriormente; falhas intermediárias não executam rollback explícito.
+
+**Descrição do problema:** A operação de checkout envolve múltiplas leituras e escritas sem proteção explícita contra concorrência ou falha parcial.
+
+**Impacto:** Estoque incorreto, pedidos incompletos ou venda acima do estoque em requisições simultâneas.
+
+**Recomendação:** Usar transação com rollback, atualizar estoque de forma condicional e verificar o número de linhas afetadas.
+
+**Justificativa da severidade:** O fluxo altera estoque e pedido, dados que precisam permanecer consistentes.
+
+**Situação da evidência:** Confirmado por análise do fluxo.  
+**Validação adicional necessária:** Teste concorrente e teste de falha entre etapas.
+
+### F-012 — N+1 Query Problem
 
 **Severidade:** MEDIUM  
 **Categoria:** Desempenho  
 **Localização:**
 
-- Arquivo: `models.py`
-- Linha(s): 171-229
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 171-192, 203-224
 
-**Evidência:** Para cada pedido é criada uma consulta de itens e, para cada item, outra consulta de produto (`cursor2` e `cursor3`).
+**Evidência:** Para cada pedido, são feitas consultas adicionais para itens e, para cada item, outra consulta para o produto.
 
 **Descrição do problema:** A quantidade de consultas cresce com o número de pedidos e itens retornados.
 
-**Impacto:** Latência e carga no SQLite aumentam desnecessariamente em listagens maiores.
+**Impacto:** Latência e carga desnecessárias no SQLite, especialmente nas listagens.
 
-**Recomendação:** Usar JOINs ou consultas em lote e medir o ganho com dados representativos.
+**Recomendação:** Usar JOINs ou consultas em lote e compartilhar uma estratégia de mapeamento de resultados.
 
-**Justificativa da severidade:** O impacto é de desempenho e tende a crescer com o volume de dados, sem evidência de indisponibilidade atual.
+**Justificativa da severidade:** O padrão é demonstrado por consultas dentro de loops, mas o impacto depende do volume.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Medir número de queries e latência com massa de dados.
+**Validação adicional necessária:** Medir consultas e latência com volume representativo.
 
-### F-011 — Validação de entrada incompleta
+### F-013 — Missing Input Validation
 
 **Severidade:** MEDIUM  
 **Categoria:** Qualidade / Segurança  
 **Localização:**
 
-- Arquivo: `controllers.py`
-- Linha(s): 148-181, 190-204, 239-244
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 169-175, 190-202, 239-244
 
-**Evidência:** Campos são lidos sem validação consistente de tipo/estrutura; login usa `dados.get` sem validar se `request.get_json()` retornou objeto; itens de pedido e status não têm validação de estrutura/existência completa.
+**Evidência:** Algumas rotas acessam `.get` sem garantir que `request.get_json()` retornou um objeto; itens de pedido, tipos numéricos e existência do usuário não são validados completamente.
 
-**Descrição do problema:** Entradas inválidas podem alcançar regras de negócio e persistência ou gerar exceções.
+**Descrição do problema:** Entradas malformadas podem gerar exceções ou chegar às regras/persistência com estrutura inválida.
 
-**Impacto:** Erros 500, dados inconsistentes e comportamento inesperado em operações de pedido e autenticação.
+**Impacto:** Respostas 500 para entradas inválidas, dados inconsistentes e comportamento inesperado.
 
-**Recomendação:** Validar schema, tipos, limites e relações antes de chamar a camada de negócio, retornando erros 4xx consistentes.
+**Recomendação:** Validar tipo, formato, limites, campos aninhados e referências antes de chamar Services.
 
-**Justificativa da severidade:** Há controles parciais, mas não cobertura suficiente para os contratos recebidos.
+**Justificativa da severidade:** Há validações parciais, mas não uma validação consistente em todas as rotas.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Definir schemas e testar entradas ausentes, nulas e de tipo incorreto.
+**Validação adicional necessária:** Criar matriz de casos inválidos por endpoint.
 
-### F-012 — Tratamento genérico de exceções e exposição de detalhes
+### F-014 — Tratamento inadequado de erros e exceções
 
 **Severidade:** MEDIUM  
 **Categoria:** Qualidade / Segurança  
 **Localização:**
 
-- Arquivo: `app.py`
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 8-11, 21-22, 60-61, 95-96, 108-109, 125-126, 133-134, 143-144, 164-165, 185-186, 218-219, 226-227, 234-235, 261-262, 291-292
+- Arquivo: `code-smells-project/app.py`
 - Linha(s): 77-79
-- Arquivo: `controllers.py`
-- Linha(s): 10-11, 21-22, 60-61, 95-96, 108-109, 125-126, 143-144, 164-165, 185-186, 218-219, 226-227, 234-235, 254-255, 261-262, 291
 
-**Evidência:** Exceções são capturadas como `Exception` e `str(e)` é devolvido diretamente ao cliente; vários fluxos também usam `print` para erros.
+**Evidência:** Handlers capturam `Exception` de forma ampla, imprimem a exceção ou retornam seu texto diretamente ao cliente.
 
-**Descrição do problema:** O tratamento não diferencia erros esperados de falhas internas e pode expor mensagens de infraestrutura.
+**Descrição do problema:** Erros de infraestrutura, validação e domínio não são diferenciados nem tratados por um mecanismo central.
 
-**Impacto:** Respostas inconsistentes, diagnóstico frágil e possível divulgação de nomes de tabelas, SQL ou detalhes internos.
+**Impacto:** Diagnóstico inconsistente, vazamento de detalhes internos e contratos de erro instáveis.
 
-**Recomendação:** Centralizar handlers, capturar exceções específicas, registrar detalhes em logger interno e retornar mensagens públicas estáveis.
+**Recomendação:** Centralizar handlers, capturar exceções específicas, registrar stack trace no servidor e mapear erros de domínio para respostas seguras.
 
-**Justificativa da severidade:** O padrão está disseminado e combina observabilidade inadequada com exposição de erro.
+**Justificativa da severidade:** O padrão se repete em quase todas as rotas e expõe mensagens internas.
 
 **Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Catalogar os erros esperados por endpoint.
+**Validação adicional necessária:** Definir catálogo de erros e códigos HTTP esperados.
 
-### F-013 — Valores mágicos e strings de domínio espalhados
+### F-015 — Long Methods / Excessive Method Complexity
 
 **Severidade:** LOW  
 **Categoria:** Qualidade  
 **Localização:**
 
-- Arquivo: `controllers.py`
-- Linha(s): 44, 241
-- Arquivo: `models.py`
-- Linha(s): 146-147, 247-253, 294-297
+- Arquivo: `code-smells-project/controllers.py`
+- Linha(s): 25-63, 190-220
+- Arquivo: `code-smells-project/models.py`
+- Linha(s): 133-169
 
-**Evidência:** Categorias, status de pedido, limites de desconto e mensagens SQL são definidos diretamente em handlers e consultas.
+**Evidência:** Funções de criação de produto e pedido combinam validações, cálculos, persistência, notificações e formatação.
 
-**Descrição do problema:** Regras e estados de domínio ficam espalhados e sem constantes ou estruturas nomeadas.
+**Descrição do problema:** Funções com etapas independentes dificultam leitura e testes unitários.
 
-**Impacto:** Maior risco de inconsistência e manutenção mais difícil.
+**Impacto:** Maior custo de manutenção e risco de regressão.
 
-**Recomendação:** Centralizar enums/constantes e regras de domínio em módulo apropriado.
+**Recomendação:** Extrair validadores, casos de uso e adaptadores de notificação conforme o plano MVC.
 
-**Justificativa da severidade:** O impacto principal é de manutenção, sem risco independente demonstrado.
-
-**Situação da evidência:** Confirmado por análise do código.  
-**Validação adicional necessária:** Não identificada.
-
-### F-014 — Métodos extensos com responsabilidades múltiplas
-
-**Severidade:** LOW  
-**Categoria:** Qualidade  
-**Localização:**
-
-- Arquivo: `models.py`
-- Linha(s): 133-168, 171-200, 203-229
-- Arquivo: `database.py`
-- Linha(s): 7-86
-
-**Evidência:** `criar_pedido`, os carregadores de pedidos e `get_db` combinam múltiplas etapas de validação, consulta, transformação, persistência e inicialização.
-
-**Descrição do problema:** Métodos longos dificultam entendimento, testes unitários e evolução.
-
-**Impacto:** Maior chance de regressões e baixo isolamento de regras.
-
-**Recomendação:** Extrair funções coesas após definir os limites de services/repositories e preservar os contratos atuais.
-
-**Justificativa da severidade:** É um problema de manutenibilidade, sem impacto operacional independente confirmado.
+**Justificativa da severidade:** O problema é de manutenção; os riscos de segurança e integridade já estão registrados nos findings específicos.
 
 **Situação da evidência:** Confirmado por análise do código.  
 **Validação adicional necessária:** Não identificada.
 
 ## D. APIs deprecated e dependências obsoletas
 
-Nenhuma API deprecated ou dependência obsoleta foi confirmada no escopo analisado.
-
-`requirements.txt` declara Flask 3.1.1 e Flask-CORS 5.0.1, mas não há arquivo de lock para verificar dependências transitivas. A análise não classificou APIs como deprecated apenas por serem antigas ou por não haver informação de versão do Python.
+Nenhuma API deprecated ou dependência obsoleta foi confirmada no escopo analisado. `requirements.txt` declara Flask 3.1.1 e Flask-CORS 5.0.1, mas não há lockfile nem saída de auditoria do ambiente instalado. A confirmação completa requer consulta às fontes oficiais e às dependências resolvidas.
 
 ## E. Riscos e suspeitas pendentes de validação
 
-### S-001 — Exposição histórica de credenciais
+### S-001 — Contexto de produção do debug
 
-**Localização:** `app.py:7` e `database.py:76-79`  
-**Indício encontrado:** Há segredos e senhas literais no código.
+**Localização:** `code-smells-project/app.py:8, 88`  
+**Indício encontrado:** Debug está ativado e o servidor embutido é iniciado em `0.0.0.0`.
 
-**Por que ainda não foi confirmado:** Não foi verificado o histórico do repositório nem os ambientes em que os valores foram usados.
+**Por que ainda não foi confirmado:** O README descreve execução local, portanto não é possível afirmar apenas pelo código que essa configuração é usada em produção.
 
-**Como validar:** Auditar histórico, artefatos de CI/CD e ambientes; rotacionar valores caso tenham sido publicados ou utilizados fora de desenvolvimento.
+**Como validar:** Inspecionar o ambiente de implantação e a configuração de execução.
 
-**Impacto potencial:** Comprometimento de sessões, contas e dados.
-
-### S-002 — Vulnerabilidades em dependências transitivas
-
-**Localização:** `requirements.txt`  
-**Indício encontrado:** Não existe lock file nem relatório de auditoria de dependências.
-
-**Por que ainda não foi confirmado:** Não foi executada consulta de vulnerabilidades ou resolução do ambiente.
-
-**Como validar:** Gerar lock em ambiente controlado e executar ferramenta de auditoria compatível com Python.
-
-**Impacto potencial:** Vulnerabilidades herdadas de dependências transitivas.
+**Impacto potencial:** Exposição de debugger e informações internas caso seja publicado em produção.
 
 ## F. Recomendações arquiteturais para MVC
 
 ### Estrutura sugerida
 
 ```text
-app/
-  __init__.py
+code-smells-project/
+  app.py
   config.py
   routes/
     products.py
     users.py
     orders.py
-    reports.py
+    admin.py
   controllers/
-    products.py
-    users.py
-    orders.py
+    product_controller.py
+    user_controller.py
+    order_controller.py
   services/
     product_service.py
     user_service.py
     order_service.py
-  models/
-    product.py
-    user.py
-    order.py
+    auth_service.py
   repositories/
     product_repository.py
     user_repository.py
     order_repository.py
-  database.py
-  errors.py
-run.py
+  models/
+    product.py
+    user.py
+    order.py
+  infrastructure/
+    database.py
+  shared/
+    errors.py
+    validation.py
 ```
 
 ### Responsabilidades recomendadas
 
-**Models:** Representar entidades e regras simples de domínio, sem conhecer Flask.
+**Models:** Entidades e regras invariantes simples de Produto, Usuário, Pedido e ItemPedido; sem acesso direto a HTTP ou conexão.
 
-**Views / Routes:** Registrar rotas, receber requisições e delegar aos controllers; não executar SQL.
+**Views / Routes:** Registro das rotas e tradução de entrada/saída HTTP; sem SQL ou regra de negócio.
 
-**Controllers:** Coordenar entrada, chamar services e construir respostas HTTP.
+**Controllers:** Coordenação de um caso de uso, recebendo dados já extraídos da requisição e delegando ao Service.
 
-**Services:** Implementar validações de negócio, autenticação/autorização, pedidos, estoque e notificações.
+**Services:** Regras de negócio de produtos, autenticação, pedidos e relatórios; independentes de Flask e SQLite.
 
-**Repositories / Persistência:** Encapsular SQLite, usar queries parametrizadas e controlar transações.
+**Repositories / Persistência:** Consultas parametrizadas, mapeamento de linhas, transações e ciclo de vida da conexão.
 
-**Configurações e componentes compartilhados:** Variáveis de ambiente, logging, tratamento centralizado de erros, schemas de entrada e middleware de autenticação.
+**Configurações e componentes compartilhados:** Configuração por ambiente, autenticação/autorização, validação, logging e handlers centralizados de erro.
 
 ### Componentes que devem ser preservados
 
-Os endpoints e formatos de resposta atuais devem ser preservados durante a migração, sempre que compatível com a correção dos riscos. A inicialização do SQLite e os dados de exemplo podem permanecer como mecanismo de desenvolvimento, desde que credenciais e configuração sejam externalizadas.
+O contrato das rotas, os formatos JSON documentados pelo comportamento atual, o schema SQLite e as regras de cálculo do relatório devem ser preservados durante a refatoração, exceto mudanças de segurança aprovadas e documentadas.
+
+### Plano arquitetural verificável aprovado
+
+| Componente atual | Responsabilidade atual | Componente futuro | Camada | Finding relacionado | Critério de aceite |
+| --- | --- | --- | --- | --- | --- |
+| `app.py` | Criação da app e rotas | `app.py`, `config.py`, `routes/` | Views/Routes | F-004, F-008 | Rotas originais preservadas e configuração sem segredos |
+| `controllers.py` | HTTP, validação e regras | Controllers por domínio | Controllers | F-009, F-013, F-014, F-015 | Controllers sem SQL e sem regras de persistência |
+| Funções de negócio em `controllers.py`/`models.py` | Casos de uso | `services/` | Services | F-006, F-009, F-011 | Services independentes de Flask/request |
+| SQL em `models.py` | Persistência e mapeamento | `repositories/` | Repositories | F-002, F-010, F-012 | Consultas parametrizadas e sem acesso direto pelos controllers |
+| `database.py` | Conexão e schema | `infrastructure/database.py` | Persistência | F-007, F-011 | Conexão por contexto e transações verificáveis |
+| Dados de domínio | Estrutura de registros | `models/` | Models | F-005, F-006 | Senhas nunca serializadas; entidades sem SQL |
+
+**Dependências permitidas entre camadas:** Routes/Views -> Controllers -> Services -> Repositories/Models; infraestrutura fornece conexão aos Repositories. Models não dependem de Flask; Services não dependem de request/response; Controllers não executam SQL.
+
+**Camadas deliberadamente não criadas:** Nenhuma das camadas previstas acima; cada uma é necessária para corrigir os achados e tornar a arquitetura verificável.
+
+**Critérios de aceite arquiteturais:** Existência efetiva das camadas; ausência de SQL em Controllers/Services; consultas parametrizadas nos Repositories; Services sem Flask; conexão não global; autenticação/autorização fora das regras de persistência; Models sem senha em respostas.
 
 ## G. Plano sugerido de refatoração
 
-| Etapa | Alteração proposta | Findings relacionados | Risco da mudança |
+| Etapa | Alteração proposta | Findings relacionados | Risco |
 | --- | --- | --- | --- |
-| 1 | Remover `/admin/query`, proteger `/admin/reset-db` e substituir SQL concatenado por queries parametrizadas | F-002, F-003, F-004 | Alto |
-| 2 | Externalizar segredo, desabilitar debug por padrão, retirar dados sensíveis do health check e implementar logging seguro | F-001, F-006, F-012 | Médio |
-| 3 | Migrar senhas para hash, remover senha das respostas e adicionar autenticação/autorização | F-004, F-005 | Alto |
-| 4 | Separar controllers, services e repositories; controlar conexão e transações | F-007, F-008, F-009, F-014 | Alto |
-| 5 | Corrigir carregamento de pedidos, schemas de entrada e constantes de domínio | F-010, F-011, F-013 | Médio |
+| 1 | Remover/restringir SQL arbitrário, externalizar configuração e definir autenticação/autorização | F-001, F-003, F-004, F-008 | Alto |
+| 2 | Criar infraestrutura de banco, Repositories e parametrizar consultas | F-002, F-007, F-010, F-011, F-012 | Alto |
+| 3 | Criar Models e Services por domínio, incluindo hash de senha e checkout transacional | F-005, F-006, F-011 | Alto |
+| 4 | Separar Routes/Controllers, validação e tratamento centralizado de erros | F-009, F-013, F-014, F-015 | Médio |
+| 5 | Executar testes de contrato, segurança, concorrência e desempenho | Todos | Médio |
 
-O plano deve preservar endpoints, formatos de resposta e regras de negócio documentadas. A remoção de `/admin/query` e a alteração do tratamento de senhas são mudanças intencionais de segurança e exigem confirmação antes da execução.
+O plano preserva endpoints, formatos de resposta, regras de relatório e compatibilidade com o schema sempre que possível. A remoção da rota de SQL arbitrário e a mudança do fluxo de autenticação são mudanças de segurança que deverão ser explicitamente aprovadas antes da execução.
 
 ## H. Estratégia de validação após a refatoração
 
 ### Verificações previstas
 
-- [ ] Verificar e fixar a versão de Python e as dependências.
-- [ ] Executar testes automatizados, caso sejam adicionados ou encontrados.
-- [ ] Iniciar a aplicação sem debug inseguro e verificar `/` e `/health`.
-- [ ] Verificar endpoints de produtos, usuários, login, pedidos e relatório.
-- [ ] Confirmar códigos HTTP e formatos JSON existentes.
-- [ ] Testar autenticação e autorização em rotas públicas, protegidas e administrativas.
-- [ ] Testar SQL Injection, payloads inválidos e erros sem exposição de detalhes internos.
-- [ ] Testar criação de pedidos, rollback e concorrência de estoque.
-- [ ] Medir consultas de listagem de pedidos após a correção do N+1.
+- [ ] Verificar dependências instaladas com `pip install -r requirements.txt`.
+- [ ] Iniciar a aplicação sem erros.
+- [ ] Criar testes automatizados para rotas existentes.
+- [ ] Verificar `GET /`, `GET /health`, rotas de produtos, usuários, pedidos, login e relatório.
+- [ ] Verificar códigos HTTP e formatos JSON existentes.
+- [ ] Testar entradas SQL maliciosas e confirmar que não alteram a consulta.
+- [ ] Confirmar que senhas são armazenadas com hash e nunca aparecem em respostas.
+- [ ] Confirmar proteção das rotas administrativas e de escrita.
+- [ ] Testar rollback e concorrência no checkout.
+- [ ] Medir consultas das listagens de pedidos após eliminar N+1.
+- [ ] Confirmar imports e dependências permitidas entre camadas.
 
-Nenhum teste foi executado nesta auditoria; os itens acima são validações previstas para a Fase 3.
+Nenhum endpoint foi executado nesta Fase 2; a validação de runtime fica para a Fase 3, após autorização.
 
 ## I. Conclusão da auditoria
 
-A auditoria confirmou riscos críticos que devem ser tratados antes de qualquer exposição da API em ambiente não controlado, especialmente SQL arbitrário, SQL Injection, ausência de autorização e senhas em texto puro. A estrutura atual permite uma migração incremental para MVC, mas a ordem deve priorizar segurança e integridade transacional antes da reorganização de pastas.
+A Fase 1 identificou uma API Flask/SQLite monolítica, com quatro arquivos-fonte de aplicação analisados. A Fase 2 confirmou 15 findings, incluindo seis críticos, e propôs uma arquitetura MVC com Services e Repositories efetivamente implementados. A refatoração é viável, mas deve começar pelos riscos de segurança e manter rastreabilidade entre cada finding, mudança e teste.
 
 ### Status da execução
 
@@ -498,3 +525,7 @@ A auditoria confirmou riscos críticos que devem ser tratados antes de qualquer 
 ### Confirmação obrigatória
 
 **A auditoria foi concluída e o relatório está disponível. Você autoriza iniciar a Fase 3 — Refatoração MVC, conforme o plano apresentado?**
+
+## J. Atualização obrigatória após a Fase 3
+
+Esta seção deverá ser preenchida ao final da refatoração, com a arquitetura realmente implementada, diferenças em relação ao plano, critérios funcionais/de segurança/arquiteturais, rastreabilidade dos findings, testes reais e limitações.

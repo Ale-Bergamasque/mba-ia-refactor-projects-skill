@@ -1,6 +1,7 @@
 ---
 name: refactor-arch
 description: Analisa, audita e refatora projetos de software para uma arquitetura baseada em MVC, identificando problemas arquiteturais, de segurança, performance e qualidade de código. Use quando solicitado a auditar ou refatorar a arquitetura de um projeto.
+user-invocable: true
 ---
 
 # Skill: Refatoração Arquitetural
@@ -78,6 +79,16 @@ Identificar e classificar os anti-patterns e code smells encontrados no projeto.
 7. Informe o arquivo e as linhas exatas de cada ocorrência.
 8. Descreva o problema, seu impacto e a recomendação de correção.
 9. Organize os achados por ordem de severidade.
+10. Consulte `references/mvc-guidelines.md` e elabore uma proposta arquitetural verificável, adaptada à tecnologia e às necessidades reais do projeto, contendo:
+    - a arquitetura proposta e as camadas que deverão ser implementadas;
+    - as responsabilidades de cada camada;
+    - o mapeamento entre componentes existentes e componentes propostos;
+    - as dependências permitidas entre as camadas;
+    - os findings relacionados a cada mudança arquitetural;
+    - os critérios de aceite funcionais, de segurança e arquiteturais;
+    - a justificativa para qualquer camada não aplicável ou que não será implementada.
+11. Inclua a proposta arquitetural no relatório de auditoria, identificando-a como `AGUARDANDO_APROVACAO`.
+12. Não implemente a proposta nesta fase. A implementação somente poderá ocorrer após autorização explícita do usuário.
 
 Consulte obrigatoriamente:
 
@@ -93,6 +104,9 @@ Consulte obrigatoriamente:
 - Salve o relatório em `reports/`, na raiz do repositório principal (ao lado das pastas dos projetos), usando o nome `audit-project-1.md`, `audit-project-2.md` ou `audit-project-3.md`, conforme o projeto analisado.
 - Crie a pasta `reports/` na raiz do repositório principal se necessário. A criação do relatório é permitida na Fase 2; não modifique o código-fonte da aplicação.
 - Apresente ao usuário o caminho do relatório gerado antes de solicitar autorização para a Fase 3.
+- A arquitetura descrita no relatório deve ser identificada como `PROPOSTA`, nunca como aprovada antes da autorização explícita do usuário.
+- A conclusão da auditoria não representa aprovação automática da arquitetura nem autorização para modificar o código.
+- Registre no relatório o status do plano arquitetural como `AGUARDANDO_APROVACAO` até que o usuário autorize explicitamente sua implementação.
 
 Ao finalizar, pergunte ao usuário:
 
@@ -122,7 +136,7 @@ Corrigir os problemas identificados e organizar o projeto em uma arquitetura bas
 
 1. Consulte `references/mvc-guidelines.md`.
 2. Consulte `references/refactoring-playbook.md`.
-3. Antes de editar, produza um plano arquitetural verificável contendo:
+3. Antes de editar, verifique o plano arquitetural apresentado no relatório de auditoria e a autorização explícita do usuário. O plano deve conter:
    - a arquitetura escolhida e as camadas que serão realmente implementadas;
    - as responsabilidades de cada camada;
    - o mapeamento entre componentes atuais e futuros componentes;
@@ -130,8 +144,8 @@ Corrigir os problemas identificados e organizar o projeto em uma arquitetura bas
    - os findings relacionados a cada mudança;
    - critérios de aceite funcionais, de segurança e arquiteturais;
    - a justificativa explícita para qualquer camada prevista que não será criada.
-4. Apresente o plano ao usuário e confirme que ele corresponde à arquitetura aprovada no relatório. O plano deve declarar quais critérios funcionais, de segurança e arquiteturais serão verificados.
-5. Não inicie alterações antes da autorização explícita para o plano arquitetural. A autorização da Fase 3 não autoriza automaticamente um plano diferente do apresentado na auditoria.
+4. Se o relatório já apresentar um plano arquitetural completo e o usuário autorizar explicitamente sua implementação, registre o status como `APROVADO` e prossiga com a execução, sem solicitar uma segunda autorização para o mesmo plano.
+5. Se o plano estiver incompleto ou exigir mudanças materiais em relação à proposta apresentada na auditoria, complete ou revise o plano, apresente as diferenças ao usuário e solicite autorização explícita antes de modificar o código. Enquanto essa autorização não for concedida, mantenha o status `AGUARDANDO_APROVACAO`.
 6. Implemente todas as camadas, responsabilidades e dependências previstas no plano aprovado. Não substitua uma camada aprovada por reorganização superficial, renomeação de funções ou mera correção de segurança.
 7. Se uma mudança relevante exigir alterar camadas, responsabilidades, dependências ou contratos previstos no plano, interrompa a execução, descreva a diferença e solicite nova autorização. Não continue com o plano alterado sem essa autorização.
 8. Identifique quais responsabilidades pertencem a Models, Views/Routes, Controllers, Services, Repositories e componentes compartilhados, conforme as camadas escolhidas.
@@ -175,8 +189,10 @@ Após a refatoração:
    - **Funcionais:** endpoints, contratos, regras de negócio e regressões;
    - **Segurança:** autenticação, autorização, segredos, validação, SQL e dados sensíveis;
    - **Arquiteturais:** camadas, responsabilidades, dependências e ausência de acoplamentos proibidos.
+
 9. Para cada finding auditado, registre a alteração, os arquivos envolvidos, a evidência de verificação e classifique-o como `corrigido`, `parcialmente corrigido` ou `pendente`.
-10. Informe problemas que não puderam ser corrigidos.
+10. Preencha no relatório de auditoria a matriz de conformidade arquitetural definida em `references/report-template.md`, comparando todos os componentes previstos no plano aprovado com os componentes realmente implementados. Verifique responsabilidades, integração no fluxo da aplicação e dependências entre camadas, registrando evidências e classificando cada item como `APROVADO`, `REPROVADO` ou `PENDENTE`.
+11. Informe problemas que não puderam ser corrigidos.
 
 ### Critério de conclusão da Fase 3
 

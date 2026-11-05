@@ -16,7 +16,13 @@ A refatoração só poderá começar após confirmação explícita do usuário.
 
 ## 2. Local de armazenamento
 
-Os relatórios devem ser armazenados na pasta `reports/`, na raiz do repositório correspondente.
+Os relatórios devem ser armazenados na pasta `reports/`, na raiz do repositório principal que contém os projetos analisados, conforme definido no `SKILL.md`.
+
+A Skill deve identificar o repositório de destino a partir do workspace e da estrutura real de diretórios. Não deve presumir que o diretório onde a Skill está instalada é o destino do relatório.
+
+Se o repositório de destino não puder ser identificado de maneira inequívoca, solicitar esclarecimento ao usuário antes de criar o relatório.
+
+A execução da Skill a partir de outro diretório não altera o local de armazenamento definido para o relatório.
 
 Para a atividade, utilizar:
 
@@ -230,17 +236,29 @@ Descrever como o projeto pode ser organizado em uma arquitetura baseada em MVC, 
 
 Não criar camadas desnecessárias apenas para reproduzir uma estrutura fixa.
 
-### Plano arquitetural verificável aprovado
+### Plano arquitetural verificável proposto
 
-| Componente atual | Responsabilidade atual | Componente futuro | Camada | Finding relacionado | Critério de aceite |
-| --- | --- | --- | --- | --- | --- |
-| [Arquivo/função] | [Responsabilidade] | [Arquivo/componente] | [Camada] | [F-xxx ou N/A] | [Evidência esperada] |
+**Status do plano:** `AGUARDANDO_APROVACAO`
 
-**Dependências permitidas entre camadas:** [Descrever a direção aprovada.]
+**Arquitetura proposta:** [Descrever a arquitetura escolhida e as camadas previstas, conforme a tecnologia e as necessidades do projeto.]
+
+| Componente atual | Responsabilidade atual | Componente futuro    | Camada   | Finding relacionado | Critério de aceite   |
+| ---------------- | ---------------------- | -------------------- | -------- | ------------------- | -------------------- |
+| [Arquivo/função] | [Responsabilidade]     | [Arquivo/componente] | [Camada] | [F-xxx ou N/A]      | [Evidência esperada] |
+
+**Dependências permitidas entre camadas:** [Descrever a direção proposta e as exceções justificadas.]
 
 **Camadas deliberadamente não criadas:** [Listar e justificar. Se nenhuma, escrever "Nenhuma".]
 
-**Critérios de aceite arquiteturais:** [Listar verificações de responsabilidades, imports e dependências.]
+**Critérios de aceite funcionais:** [Descrever os comportamentos, contratos e funcionalidades que deverão ser preservados ou verificados.]
+
+**Critérios de aceite de segurança:** [Descrever as verificações de segurança relacionadas aos findings e às alterações propostas.]
+
+**Critérios de aceite arquiteturais:** [Listar verificações de responsabilidades, integrações e dependências.]
+
+**Regra de aprovação:** O status somente poderá ser alterado para `APROVADO` após autorização explícita do usuário para implementar este plano. A conclusão da auditoria não constitui aprovação automática.
+
+Se o plano precisar de alterações materiais após a aprovação, registrar as diferenças e solicitar nova autorização antes de executar as mudanças afetadas.
 
 ---
 
@@ -316,11 +334,39 @@ Não interpretar silêncio, mudança de assunto ou resposta ambígua como autori
 
 ## J. Atualização obrigatória após a Fase 3
 
-Esta seção deve ser preenchida ao final da refatoração, no mesmo relatório.
+Esta seção deve ser preenchida durante a Fase 3 e finalizada após a refatoração, no mesmo relatório.
+
+### Autorização do plano arquitetural
+
+**Status do plano:** [AGUARDANDO_APROVACAO / APROVADO]
+
+**Autorização explícita:** [Registrar a confirmação efetivamente fornecida pelo usuário, sem inventar aprovação.]
+
+**Plano autorizado:** [Identificar a proposta arquitetural aprovada na seção F e eventuais revisões autorizadas.]
+
+**Alterações materiais posteriores:** [Registrar mudanças propostas, diferenças em relação ao plano original e respectivas autorizações. Se não houver, escrever "Nenhuma".]
+
+O status `APROVADO` somente pode ser utilizado quando existir autorização explícita do usuário. A aprovação do plano não significa que sua implementação já foi concluída ou validada.
 
 ### Arquitetura implementada
 
-[Descrever as camadas realmente criadas ou preservadas, suas responsabilidades e dependências.]
+[Descrever as camadas realmente criadas ou preservadas, suas responsabilidades, dependências e integração com o fluxo da aplicação.]
+
+### Matriz de conformidade arquitetural
+
+| Componente previsto            | Camada   | Arquivo implementado               | Responsabilidade verificada | Integração verificada    | Evidência                              | Status                        |
+| ------------------------------ | -------- | ---------------------------------- | --------------------------- | ------------------------ | -------------------------------------- | ----------------------------- |
+| [Componente do plano aprovado] | [Camada] | [Caminho real ou não implementado] | [Sim/Não/Não verificado]    | [Sim/Não/Não verificado] | [Arquivo, teste, comando ou limitação] | [APROVADO/REPROVADO/PENDENTE] |
+
+Regras de preenchimento:
+
+1. Incluir todos os componentes e camadas previstos no plano arquitetural aprovado.
+2. Verificar se cada componente desempenha sua responsabilidade e participa do fluxo real da aplicação.
+3. Registrar evidências verificáveis, sem presumir que a existência de arquivos ou diretórios comprova conformidade.
+4. Classificar como `REPROVADO` componentes que comprovadamente não atendam ao plano aprovado.
+5. Classificar como `PENDENTE` componentes cuja implementação ou integração não tenha sido possível verificar, indicando o motivo.
+6. Não declarar a refatoração totalmente concluída enquanto existirem critérios arquiteturais `REPROVADO` ou `PENDENTE`.
+7. Quando a implementação estiver incompleta, registrar as limitações e aplicar as regras de conclusão parcial definidas no `SKILL.md`.
 
 ### Diferenças em relação ao plano aprovado
 
@@ -328,33 +374,63 @@ Esta seção deve ser preenchida ao final da refatoração, no mesmo relatório.
 
 ### Critérios de aceite funcionais
 
-| Critério | Resultado | Evidência |
-| --- | --- | --- |
+| Critério                      | Resultado                         | Evidência               |
+| ----------------------------- | --------------------------------- | ----------------------- |
 | [Endpoint, contrato ou regra] | [Aprovado / Reprovado / Pendente] | [Comando/teste/arquivo] |
 
 ### Critérios de aceite de segurança
 
-| Critério | Resultado | Evidência |
-| --- | --- | --- |
+| Critério                | Resultado                         | Evidência               |
+| ----------------------- | --------------------------------- | ----------------------- |
 | [Controle de segurança] | [Aprovado / Reprovado / Pendente] | [Comando/teste/arquivo] |
 
 ### Critérios de aceite arquiteturais
 
-| Critério | Resultado | Evidência |
-| --- | --- | --- |
+| Critério                                  | Resultado                         | Evidência                |
+| ----------------------------------------- | --------------------------------- | ------------------------ |
 | [Camada, responsabilidade ou dependência] | [Aprovado / Reprovado / Pendente] | [Inspeção/comando/teste] |
 
 ### Rastreabilidade e status final dos findings
 
-| Finding | Alteração realizada | Evidência de correção | Status |
-| --- | --- | --- | --- |
-| [F-001] | [Alteração e arquivos] | [Teste/inspeção] | [Corrigido / Parcialmente corrigido / Pendente] |
+| Finding | Alteração realizada    | Evidência de correção | Status                                          |
+| ------- | ---------------------- | --------------------- | ----------------------------------------------- |
+| [F-001] | [Alteração e arquivos] | [Teste/inspeção]      | [Corrigido / Parcialmente corrigido / Pendente] |
 
 Nenhum finding pode ser marcado como `corrigido` sem evidência funcional, de segurança ou arquitetural compatível com sua categoria.
 
 ### Testes reais e limitações
 
 [Registrar comandos, resultados reais, endpoints testados, testes não executados e limitações do ambiente.]
+
+### Conclusão da Fase 3 — Refatoração
+
+**Status final:** [CONCLUIDA / PARCIALMENTE_CONCLUIDA / INCOMPLETA]
+
+**Resumo da implementação:** [Descrever objetivamente o que foi implementado e validado.]
+
+**Critérios funcionais:** [Quantidade aprovada, reprovada e pendente.]
+
+**Critérios de segurança:** [Quantidade aprovada, reprovada e pendente.]
+
+**Critérios arquiteturais:** [Quantidade aprovada, reprovada e pendente.]
+
+**Findings:** [Quantidade corrigida, parcialmente corrigida e pendente.]
+
+**Pendências e limitações:** [Listar os itens não resolvidos ou não verificados. Se não houver, escrever "Nenhuma".]
+
+**Próximas ações necessárias:** [Descrever correções, verificações ou decisões pendentes. Se não houver, escrever "Nenhuma".]
+
+#### Regras para determinar o status final
+
+- `CONCLUIDA`: todos os critérios funcionais, de segurança e arquiteturais previstos no plano aprovado foram atendidos e possuem evidências reais. Não existem critérios reprovados ou pendentes.
+- `PARCIALMENTE_CONCLUIDA`: parte das alterações foi implementada, mas ainda existem critérios reprovados ou pendentes. Esse status somente pode ser utilizado quando o usuário autorizar explicitamente a conclusão parcial, conforme as regras do `SKILL.md`.
+- `INCOMPLETA`: existem alterações ou verificações pendentes e não houve autorização para considerar a execução parcialmente concluída, ou a implementação não atende às condições de conclusão.
+
+A existência de arquivos, classes, diretórios ou testes executados não comprova, isoladamente, que a arquitetura aprovada foi implementada.
+
+Não declarar a Fase 3 como `CONCLUIDA` quando houver divergências não autorizadas, critérios reprovados, critérios pendentes ou ausência de evidências necessárias.
+
+O status final deve ser fundamentado nas matrizes de conformidade, nos critérios de aceite e nos resultados reais das verificações.
 
 ---
 

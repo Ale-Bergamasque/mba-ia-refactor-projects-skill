@@ -6,7 +6,15 @@ Este documento orienta a execução da Fase 3 — Refatoração da Skill `refact
 
 Apresenta transformações práticas de código, com exemplos de antes e depois, para corrigir problemas arquiteturais, de segurança, desempenho e qualidade.
 
-A Skill deve consultar este documento juntamente com `mvc-guidelines.md` e com o relatório de auditoria aprovado.
+A Skill deve consultar este documento juntamente com `mvc-guidelines.md` e com o relatório de auditoria.
+
+O relatório de auditoria deve conter a proposta arquitetural elaborada na Fase 2, inicialmente identificada como `AGUARDANDO_APROVACAO`.
+
+A proposta somente poderá ser considerada `APROVADO` após autorização explícita do usuário para sua implementação.
+
+Na Fase 3, a Skill deve implementar o plano aprovado, respeitando suas camadas, responsabilidades, dependências e critérios de aceite.
+
+Caso seja necessária uma mudança material no plano aprovado, a Skill deve interromper as alterações afetadas, apresentar a divergência e solicitar nova autorização antes de prosseguir.
 
 **Regras obrigatórias:**
 
@@ -59,12 +67,18 @@ class OrderController:
         self.order_service = order_service
 
     def create(self, data):
-        order = self.order_service.create(data)
-        return jsonify(order), 201
+        try:
+            order = self.order_service.create(data)
+            return jsonify(order), 201
+        except ValueError:
+            return {"error": "Pedido inválido"}, 400
 
 
 # services/order_service.py
 class OrderService:
+    def __init__(self, order_repository):
+        self.order_repository = order_repository
+
     def create(self, data):
         total = sum(
             item["price"] * item["quantity"]
@@ -74,7 +88,16 @@ class OrderService:
         if total <= 0:
             raise ValueError("Pedido inválido")
 
-        return save_order(data, total)
+        return self.order_repository.save(data, total)
+
+
+# repositories/order_repository.py
+class OrderRepository:
+    def __init__(self, persistence):
+        self.persistence = persistence
+
+    def save(self, data, total):
+        return self.persistence.save_order(data, total)
 ```
 
 **Cuidados:**
@@ -82,7 +105,11 @@ class OrderService:
 - Preservar os códigos HTTP e o formato das respostas.
 - Garantir que erros de validação continuem retornando respostas adequadas.
 - Centralizar o tratamento de exceções quando necessário.
-- Não criar um Service para operações triviais sem justificativa.
+- Manter regras de negócio no Service e operações de persistência no Repository, quando essas camadas estiverem previstas no plano aprovado.
+- Não permitir que a simples extração de funções seja considerada implementação arquitetural completa.
+- Não criar Services ou Repositories desnecessários quando o plano aprovado justificar uma arquitetura mais simples.
+- Adaptar a composição das dependências às convenções do framework utilizado.
+- Os exemplos são ilustrativos e não devem ser copiados literalmente para o projeto analisado.
 
 ---
 
@@ -121,25 +148,43 @@ class ProductRepository:
         return cursor.fetchone()
 
 
-# controllers/product_controller.py
-class ProductController:
-    def __init__(self, repository):
-        self.repository = repository
+# services/product_service.py
+class ProductService:
+    def __init__(self, product_repository):
+        self.product_repository = product_repository
 
     def get_product(self, product_id):
-        product = self.repository.find_by_id(product_id)
+        product = self.product_repository.find_by_id(product_id)
 
         if product is None:
-            return {"error": "Produto não encontrado"}, 404
+            raise LookupError("Produto não encontrado")
 
-        return jsonify(dict(product))
+        return dict(product)
+
+
+# controllers/product_controller.py
+class ProductController:
+    def __init__(self, product_service):
+        self.product_service = product_service
+
+    def get_product(self, product_id):
+        try:
+            product = self.product_service.get_product(product_id)
+            return jsonify(product), 200
+        except LookupError:
+            return {"error": "Produto não encontrado"}, 404
 ```
 
 **Cuidados:**
 
 - Respeitar a biblioteca de banco existente.
-- Preservar a estrutura dos dados retornados.
+- Preservar a estrutura dos dados retornados e os contratos HTTP.
+- Manter operações de persistência no Repository quando essa camada estiver prevista no plano aprovado.
+- Utilizar o Service para coordenar a operação e aplicar regras de negócio, quando previsto.
+- Evitar acesso direto do Controller ao Repository quando o plano aprovado exigir a intermediação do Service.
 - Não duplicar uma camada de persistência que já funciona adequadamente.
+- Não criar camadas artificiais sem justificativa arquitetural.
+- Adaptar a composição das dependências e o tratamento de exceções à tecnologia utilizada.
 
 ---
 
@@ -513,53 +558,6 @@ Para cada finding aprovado:
 7. Executar verificações relevantes.
 8. Registrar o resultado.
 
-## 15.1. Plano arquitetural e gate de conformidade
-
-Antes da primeira alteração, o agente deve produzir uma matriz de implementação:
-
-| Componente atual | Responsabilidade atual | Componente futuro | Camada | Finding relacionado | Critério de aceite |
-| --- | --- | --- | --- | --- | --- |
-| [arquivo/função] | [responsabilidade] | [arquivo/componente] | [camada] | [F-xxx] | [evidência verificável] |
-
-A matriz deve incluir componentes preservados e justificar cada camada opcional que não será criada. O agente deve verificá-la após cada etapa e ao final.
-
-O plano aprovado é um contrato de implementação. Não é permitido trocar a arquitetura por uma solução menor apenas porque ela corrige os riscos com menos alterações. Se o plano se mostrar inadequado, o agente deve parar, explicar a divergência e solicitar nova autorização.
-
-### Dependências entre camadas
-
-Como referência, o fluxo pode ser:
-
-```text
-Routes/Views -> Controllers -> Services -> Repositories -> Database
-Models/Domain podem ser usados por Services e Repositories conforme a tecnologia
-```
-
-O fluxo real pode variar, mas a exceção deve ser justificada. A validação deve detectar Controller acessando SQL ou conexão, Route/View contendo regra de negócio, Service dependendo de objetos HTTP, Repository construindo respostas HTTP, Model acumulando persistência e orquestração sem justificativa e dependências circulares.
-
-Corrigir apenas SQL, autenticação ou organização de funções não comprova conformidade arquitetural.
-
-## 15.2. Rastreabilidade e classificação dos findings
-
-Para cada finding, registrar a alteração e os arquivos envolvidos, a camada responsável, o comando/teste/inspeção que comprova o resultado e a classificação final: `corrigido`, `parcialmente corrigido` ou `pendente`.
-
-Um finding arquitetural só pode ser `corrigido` quando a responsabilidade estiver na camada planejada e a dependência entre camadas tiver sido verificada. Uma correção de comportamento sem a separação aprovada deve ser `parcialmente corrigido`.
-
-## 15.3. Critérios de aceite separados
-
-O plano e o relatório final devem separar:
-
-- **Funcionais:** endpoints, contratos, regras de negócio e regressões;
-- **Segurança:** autenticação, autorização, segredos, validação, SQL e dados sensíveis;
-- **Arquiteturais:** camadas, responsabilidades, dependências, ausência de acoplamentos proibidos e testes isolados quando aplicável.
-
-Todos os critérios devem ter resultado real: aprovado, reprovado ou pendente, com evidência.
-
-Se um problema não possuir exemplo específico neste documento, a Skill poderá propor uma solução fundamentada nas diretrizes MVC e nas convenções da tecnologia.
-
-Não inventar soluções sem analisar o código real.
-
----
-
 ## 15. Ordem sugerida de execução
 
 A ordem deve ser definida conforme os findings e o contexto do projeto.
@@ -582,7 +580,85 @@ Se uma alteração crítica exigir uma decisão de negócio desconhecida, solici
 
 ---
 
-## 16. Validação obrigatória após a refatoração
+## 16. Plano arquitetural e gate de conformidade
+
+Antes da primeira alteração, o agente deve consultar a matriz de implementação proposta no relatório de auditoria da Fase 2 e verificar se ela está completa e se sua implementação foi explicitamente autorizada pelo usuário.
+
+Se a matriz já estiver completa e aprovada, utilize-a como referência para a refatoração, sem criar um plano alternativo ou solicitar uma segunda autorização.
+
+Se estiver incompleta ou exigir mudanças materiais, complemente ou revise a proposta no relatório e solicite autorização explícita antes de modificar o código.
+
+A matriz deve seguir a estrutura abaixo:
+
+| Componente atual | Responsabilidade atual | Componente futuro    | Camada   | Finding relacionado | Critério de aceite      |
+| ---------------- | ---------------------- | -------------------- | -------- | ------------------- | ----------------------- |
+| [arquivo/função] | [responsabilidade]     | [arquivo/componente] | [camada] | [F-xxx]             | [evidência verificável] |
+
+A matriz deve incluir componentes preservados e justificar cada camada opcional que não será criada. O agente deve verificá-la após cada etapa e ao final.
+
+O plano aprovado é um contrato de implementação. Não é permitido trocar a arquitetura por uma solução menor apenas porque ela corrige os riscos com menos alterações. Se o plano se mostrar inadequado, o agente deve parar, explicar a divergência e solicitar nova autorização.
+
+### Verificação obrigatória da implementação arquitetural
+
+Após implementar as alterações, o agente deve comparar cada componente previsto no plano aprovado com a implementação real.
+
+Para isso, deve produzir uma matriz de conformidade:
+
+| Componente previsto | Camada   | Arquivo implementado | Responsabilidade verificada | Integração verificada | Evidência                    | Status                        |
+| ------------------- | -------- | -------------------- | --------------------------- | --------------------- | ---------------------------- | ----------------------------- |
+| [componente]        | [camada] | [arquivo real]       | [sim/não]                   | [sim/não]             | [teste, inspeção ou comando] | [APROVADO/REPROVADO/PENDENTE] |
+
+Regras obrigatórias:
+
+1. Verificar todos os componentes e camadas previstos no plano aprovado.
+2. Confirmar que cada componente existe e desempenha a responsabilidade planejada.
+3. Confirmar que os componentes estão integrados ao fluxo real da aplicação.
+4. Verificar as dependências entre as camadas e identificar acoplamentos proibidos pelo plano.
+5. Não considerar a simples criação de arquivos, classes ou diretórios como evidência suficiente de implementação arquitetural.
+6. Não considerar uma camada implementada se seus componentes não forem utilizados pelo fluxo correspondente da aplicação.
+7. Registrar evidências reais, indicando arquivos, funções, testes ou comandos utilizados na verificação.
+8. Classificar como `REPROVADO` qualquer critério cuja implementação comprovadamente não corresponda ao plano aprovado.
+9. Classificar como `PENDENTE` qualquer critério que não tenha sido possível verificar, informando o motivo.
+10. Não declarar a refatoração totalmente concluída enquanto houver critérios arquiteturais `REPROVADO` ou `PENDENTE`. Caso não seja possível corrigir ou validar todos os critérios, registrar as limitações e seguir as regras de conclusão parcial definidas no `SKILL.md`.
+
+A matriz de conformidade deve ser incluída no relatório final da Fase 3.
+
+### Dependências entre camadas
+
+Como referência, o fluxo pode ser:
+
+```text
+Routes/Views -> Controllers -> Services -> Repositories -> Database
+Models/Domain podem ser usados por Services e Repositories conforme a tecnologia
+```
+
+O fluxo real pode variar, mas a exceção deve ser justificada. A validação deve detectar Controller acessando SQL ou conexão, Route/View contendo regra de negócio, Service dependendo de objetos HTTP, Repository construindo respostas HTTP, Model acumulando persistência e orquestração sem justificativa e dependências circulares.
+
+Corrigir apenas SQL, autenticação ou organização de funções não comprova conformidade arquitetural.
+
+## 17. Rastreabilidade e classificação dos findings
+
+Para cada finding, registrar a alteração e os arquivos envolvidos, a camada responsável, o comando/teste/inspeção que comprova o resultado e a classificação final: `corrigido`, `parcialmente corrigido` ou `pendente`.
+
+Um finding arquitetural só pode ser `corrigido` quando a responsabilidade estiver na camada planejada e a dependência entre camadas tiver sido verificada. Uma correção de comportamento sem a separação aprovada deve ser `parcialmente corrigido`.
+
+## 18. Critérios de aceite separados
+
+O plano e o relatório final devem separar:
+
+- **Funcionais:** endpoints, contratos, regras de negócio e regressões;
+- **Segurança:** autenticação, autorização, segredos, validação, SQL e dados sensíveis;
+- **Arquiteturais:** camadas, responsabilidades, dependências, ausência de acoplamentos proibidos e testes isolados quando aplicável.
+
+Todos os critérios devem ter resultado real: aprovado, reprovado ou pendente, com evidência.
+
+Se um problema não possuir exemplo específico neste documento, a Skill poderá propor uma solução fundamentada nas diretrizes MVC e nas convenções da tecnologia.
+
+Não inventar soluções sem analisar o código real.
+
+---
+
+## 19. Validação obrigatória após a refatoração
 
 A Skill deve verificar o funcionamento da aplicação após as mudanças.
 
@@ -635,7 +711,7 @@ Ao final, apresentar:
 
 ---
 
-## 17. Resultado esperado
+## 20. Resultado esperado
 
 Após executar as transformações aprovadas, a Skill deverá entregar:
 
