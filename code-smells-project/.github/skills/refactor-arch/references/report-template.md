@@ -230,6 +230,18 @@ Descrever como o projeto pode ser organizado em uma arquitetura baseada em MVC, 
 
 Não criar camadas desnecessárias apenas para reproduzir uma estrutura fixa.
 
+### Plano arquitetural verificável aprovado
+
+| Componente atual | Responsabilidade atual | Componente futuro | Camada | Finding relacionado | Critério de aceite |
+| --- | --- | --- | --- | --- | --- |
+| [Arquivo/função] | [Responsabilidade] | [Arquivo/componente] | [Camada] | [F-xxx ou N/A] | [Evidência esperada] |
+
+**Dependências permitidas entre camadas:** [Descrever a direção aprovada.]
+
+**Camadas deliberadamente não criadas:** [Listar e justificar. Se nenhuma, escrever "Nenhuma".]
+
+**Critérios de aceite arquiteturais:** [Listar verificações de responsabilidades, imports e dependências.]
+
 ---
 
 ## G. Plano sugerido de refatoração
@@ -270,6 +282,9 @@ Descrever como a Fase 3 deverá verificar se a aplicação continua funcionando.
 - [ ] Verificar operações relevantes de leitura e escrita.
 - [ ] Verificar possíveis regressões.
 - [ ] Registrar testes que não puderem ser executados.
+- [ ] Verificar a existência e a conformidade das camadas aprovadas no plano arquitetural.
+- [ ] Verificar as dependências entre camadas e a ausência de acessos proibidos.
+- [ ] Separar resultados funcionais, de segurança e arquiteturais.
 
 Adaptar os comandos de execução e testes à linguagem e ao framework encontrados.
 
@@ -296,6 +311,50 @@ Ao finalizar o relatório, a Skill deve apresentar ao usuário a seguinte pergun
 A Skill deve aguardar uma resposta explícita.
 
 Não interpretar silêncio, mudança de assunto ou resposta ambígua como autorização.
+
+---
+
+## J. Atualização obrigatória após a Fase 3
+
+Esta seção deve ser preenchida ao final da refatoração, no mesmo relatório.
+
+### Arquitetura implementada
+
+[Descrever as camadas realmente criadas ou preservadas, suas responsabilidades e dependências.]
+
+### Diferenças em relação ao plano aprovado
+
+[Listar cada diferença. Se houver mudança relevante não autorizada, a Fase 3 não deve ser considerada concluída.]
+
+### Critérios de aceite funcionais
+
+| Critério | Resultado | Evidência |
+| --- | --- | --- |
+| [Endpoint, contrato ou regra] | [Aprovado / Reprovado / Pendente] | [Comando/teste/arquivo] |
+
+### Critérios de aceite de segurança
+
+| Critério | Resultado | Evidência |
+| --- | --- | --- |
+| [Controle de segurança] | [Aprovado / Reprovado / Pendente] | [Comando/teste/arquivo] |
+
+### Critérios de aceite arquiteturais
+
+| Critério | Resultado | Evidência |
+| --- | --- | --- |
+| [Camada, responsabilidade ou dependência] | [Aprovado / Reprovado / Pendente] | [Inspeção/comando/teste] |
+
+### Rastreabilidade e status final dos findings
+
+| Finding | Alteração realizada | Evidência de correção | Status |
+| --- | --- | --- | --- |
+| [F-001] | [Alteração e arquivos] | [Teste/inspeção] | [Corrigido / Parcialmente corrigido / Pendente] |
+
+Nenhum finding pode ser marcado como `corrigido` sem evidência funcional, de segurança ou arquitetural compatível com sua categoria.
+
+### Testes reais e limitações
+
+[Registrar comandos, resultados reais, endpoints testados, testes não executados e limitações do ambiente.]
 
 ---
 

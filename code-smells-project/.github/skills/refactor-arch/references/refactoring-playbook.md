@@ -513,6 +513,47 @@ Para cada finding aprovado:
 7. Executar verificações relevantes.
 8. Registrar o resultado.
 
+## 15.1. Plano arquitetural e gate de conformidade
+
+Antes da primeira alteração, o agente deve produzir uma matriz de implementação:
+
+| Componente atual | Responsabilidade atual | Componente futuro | Camada | Finding relacionado | Critério de aceite |
+| --- | --- | --- | --- | --- | --- |
+| [arquivo/função] | [responsabilidade] | [arquivo/componente] | [camada] | [F-xxx] | [evidência verificável] |
+
+A matriz deve incluir componentes preservados e justificar cada camada opcional que não será criada. O agente deve verificá-la após cada etapa e ao final.
+
+O plano aprovado é um contrato de implementação. Não é permitido trocar a arquitetura por uma solução menor apenas porque ela corrige os riscos com menos alterações. Se o plano se mostrar inadequado, o agente deve parar, explicar a divergência e solicitar nova autorização.
+
+### Dependências entre camadas
+
+Como referência, o fluxo pode ser:
+
+```text
+Routes/Views -> Controllers -> Services -> Repositories -> Database
+Models/Domain podem ser usados por Services e Repositories conforme a tecnologia
+```
+
+O fluxo real pode variar, mas a exceção deve ser justificada. A validação deve detectar Controller acessando SQL ou conexão, Route/View contendo regra de negócio, Service dependendo de objetos HTTP, Repository construindo respostas HTTP, Model acumulando persistência e orquestração sem justificativa e dependências circulares.
+
+Corrigir apenas SQL, autenticação ou organização de funções não comprova conformidade arquitetural.
+
+## 15.2. Rastreabilidade e classificação dos findings
+
+Para cada finding, registrar a alteração e os arquivos envolvidos, a camada responsável, o comando/teste/inspeção que comprova o resultado e a classificação final: `corrigido`, `parcialmente corrigido` ou `pendente`.
+
+Um finding arquitetural só pode ser `corrigido` quando a responsabilidade estiver na camada planejada e a dependência entre camadas tiver sido verificada. Uma correção de comportamento sem a separação aprovada deve ser `parcialmente corrigido`.
+
+## 15.3. Critérios de aceite separados
+
+O plano e o relatório final devem separar:
+
+- **Funcionais:** endpoints, contratos, regras de negócio e regressões;
+- **Segurança:** autenticação, autorização, segredos, validação, SQL e dados sensíveis;
+- **Arquiteturais:** camadas, responsabilidades, dependências, ausência de acoplamentos proibidos e testes isolados quando aplicável.
+
+Todos os critérios devem ter resultado real: aprovado, reprovado ou pendente, com evidência.
+
 Se um problema não possuir exemplo específico neste documento, a Skill poderá propor uma solução fundamentada nas diretrizes MVC e nas convenções da tecnologia.
 
 Não inventar soluções sem analisar o código real.
@@ -585,6 +626,10 @@ Ao final, apresentar:
 - Endpoints validados.
 - Problemas pendentes.
 - Limitações da validação.
+- Plano arquitetural aprovado e arquitetura efetivamente implementada.
+- Diferenças entre o plano e a implementação, com autorização correspondente.
+- Critérios funcionais, de segurança e arquiteturais, separados e evidenciados.
+- Classificação final de cada finding como corrigido, parcialmente corrigido ou pendente.
 
 **Nunca declarar sucesso sem evidências das verificações realizadas.**
 
@@ -602,5 +647,6 @@ Após executar as transformações aprovadas, a Skill deverá entregar:
 6. Aplicação inicializando corretamente, quando o ambiente permitir.
 7. Endpoints relevantes verificados.
 8. Relatório final de alterações e validações.
+9. Relatório de auditoria atualizado com a arquitetura implementada, testes reais, limitações, diferenças em relação ao plano e status final de cada finding.
 
 A Skill não deve considerar a refatoração totalmente validada se não conseguir executar as verificações necessárias. Nesse caso, deve informar claramente o que ficou pendente.

@@ -22,6 +22,8 @@ A Skill deve funcionar com diferentes linguagens, frameworks e bancos de dados, 
 7. Adapte as recomendações à tecnologia identificada.
 8. Na Fase 1, não modifique arquivos. Na Fase 2, permita apenas a criação do relatório de auditoria; não altere o código-fonte nem outros arquivos da aplicação.
 9. Nunca prossiga para a Fase 3 sem autorização explícita do usuário.
+10. A arquitetura aprovada deve ser implementada de forma verificável; correções isoladas de segurança, performance ou organização não substituem a implementação das camadas aprovadas.
+11. Mantenha rastreabilidade entre cada finding, a alteração correspondente, a evidência de validação e o status final.
 
 ## Fase 1 — Análise do Projeto
 
@@ -40,7 +42,7 @@ Identificar a tecnologia, o domínio e a arquitetura atual do projeto.
 7. Identifique os pontos de entrada da aplicação.
 8. Determine a quantidade de arquivos analisados.
 
-Consulte:
+Consulte obrigatoriamente:
 
 `references/project-analysis.md`
 
@@ -77,7 +79,7 @@ Identificar e classificar os anti-patterns e code smells encontrados no projeto.
 8. Descreva o problema, seu impacto e a recomendação de correção.
 9. Organize os achados por ordem de severidade.
 
-Consulte:
+Consulte obrigatoriamente:
 
 - `references/anti-pattern-catalog.md`
 - `references/report-template.md`
@@ -106,6 +108,12 @@ Se o usuário não autorizar, encerre a execução sem modificar o projeto.
 
 Esta fase somente poderá ser executada após a autorização explícita do usuário.
 
+Antes de qualquer alteração, a Skill deve também consultar obrigatoriamente:
+
+- `references/mvc-guidelines.md`, para responsabilidades e dependências entre camadas;
+- `references/refactoring-playbook.md`, para transformações e ordem de execução;
+- `references/report-template.md`, para critérios de aceite, rastreabilidade e atualização final do relatório.
+
 ### Objetivo
 
 Corrigir os problemas identificados e organizar o projeto em uma arquitetura baseada em MVC, preservando seu comportamento original.
@@ -114,14 +122,26 @@ Corrigir os problemas identificados e organizar o projeto em uma arquitetura bas
 
 1. Consulte `references/mvc-guidelines.md`.
 2. Consulte `references/refactoring-playbook.md`.
-3. Planeje as alterações necessárias antes de executá-las.
-4. Identifique quais responsabilidades pertencem a Models, Views/Routes e Controllers.
-5. Extraia configurações e credenciais do código-fonte.
-6. Organize as responsabilidades em módulos e camadas adequados à tecnologia.
-7. Centralize o tratamento de erros quando aplicável.
-8. Preserve os endpoints, contratos, regras de negócio e funcionalidades existentes.
-9. Atualize imports, dependências e configurações afetadas.
-10. Evite alterações desnecessárias em partes que já estejam corretamente organizadas.
+3. Antes de editar, produza um plano arquitetural verificável contendo:
+   - a arquitetura escolhida e as camadas que serão realmente implementadas;
+   - as responsabilidades de cada camada;
+   - o mapeamento entre componentes atuais e futuros componentes;
+   - as dependências permitidas entre camadas;
+   - os findings relacionados a cada mudança;
+   - critérios de aceite funcionais, de segurança e arquiteturais;
+   - a justificativa explícita para qualquer camada prevista que não será criada.
+4. Apresente o plano ao usuário e confirme que ele corresponde à arquitetura aprovada no relatório. O plano deve declarar quais critérios funcionais, de segurança e arquiteturais serão verificados.
+5. Não inicie alterações antes da autorização explícita para o plano arquitetural. A autorização da Fase 3 não autoriza automaticamente um plano diferente do apresentado na auditoria.
+6. Implemente todas as camadas, responsabilidades e dependências previstas no plano aprovado. Não substitua uma camada aprovada por reorganização superficial, renomeação de funções ou mera correção de segurança.
+7. Se uma mudança relevante exigir alterar camadas, responsabilidades, dependências ou contratos previstos no plano, interrompa a execução, descreva a diferença e solicite nova autorização. Não continue com o plano alterado sem essa autorização.
+8. Identifique quais responsabilidades pertencem a Models, Views/Routes, Controllers, Services, Repositories e componentes compartilhados, conforme as camadas escolhidas.
+9. Extraia configurações e credenciais do código-fonte.
+10. Organize as responsabilidades em módulos e camadas adequados à tecnologia, implementando efetivamente as camadas aprovadas.
+11. Centralize o tratamento de erros quando aplicável.
+12. Preserve os endpoints, contratos, regras de negócio e funcionalidades existentes, salvo mudanças de segurança aprovadas e documentadas.
+13. Atualize imports, dependências e configurações afetadas.
+14. Evite alterações desnecessárias em partes que já estejam corretamente organizadas.
+15. Após cada mudança relevante, verifique as dependências entre camadas e confirme que regras de negócio e persistência permanecem nas camadas definidas pelo plano.
 
 ### Adaptação arquitetural
 
@@ -143,7 +163,26 @@ Após a refatoração:
 4. Execute testes adicionais quando necessário.
 5. Verifique imports, dependências e configurações.
 6. Compare o comportamento anterior e posterior.
-7. Informe problemas que não puderam ser corrigidos.
+7. Verifique a arquitetura implementada:
+   - confirme que as camadas aprovadas existem ou documente a divergência autorizada;
+   - confirme que cada componente está na camada planejada;
+   - confirme que Controllers não executam persistência diretamente;
+   - confirme que Services não dependem de requisições ou respostas do framework;
+   - confirme que Repositories encapsulam a persistência quando previstos;
+   - confirme que Models não acumulam responsabilidades de Service e Repository;
+   - confirme que as dependências entre camadas seguem o plano.
+8. Separe os critérios de aceite em:
+   - **Funcionais:** endpoints, contratos, regras de negócio e regressões;
+   - **Segurança:** autenticação, autorização, segredos, validação, SQL e dados sensíveis;
+   - **Arquiteturais:** camadas, responsabilidades, dependências e ausência de acoplamentos proibidos.
+9. Para cada finding auditado, registre a alteração, os arquivos envolvidos, a evidência de verificação e classifique-o como `corrigido`, `parcialmente corrigido` ou `pendente`.
+10. Informe problemas que não puderam ser corrigidos.
+
+### Critério de conclusão da Fase 3
+
+A Fase 3 somente poderá ser marcada como concluída quando todos os critérios arquiteturais aprovados no plano tiverem sido atendidos e evidenciados, além dos critérios funcionais e de segurança. Para cada critério não atendido, o relatório deve registrar a evidência, a limitação e o status `pendente`.
+
+Se houver qualquer critério arquitetural aprovado pendente, a Skill deve interromper a conclusão normal, apresentar a lista de pendências e solicitar autorização explícita do usuário para concluir parcialmente. Sem essa autorização, a Fase 3 permanece incompleta.
 
 Registre os comandos utilizados e os resultados reais das verificações. Para cada endpoint testado, informe método, rota e resultado obtido. Caso não seja possível executar a aplicação ou testar algum endpoint, informe o motivo e marque a validação como pendente, sem declarar sucesso.
 
@@ -153,13 +192,20 @@ Nunca declare que a aplicação está funcionando sem executar as verificações
 
 Apresente:
 
+- Plano arquitetural executado e comparação com o plano aprovado.
 - Nova estrutura de diretórios.
 - Principais arquivos criados, alterados ou removidos.
-- Problemas corrigidos.
-- Problemas pendentes.
+- Findings com rastreabilidade entre problema, alteração, evidência e classificação final.
+- Critérios funcionais, de segurança e arquiteturais, cada um com resultado real.
+- Problemas corrigidos, parcialmente corrigidos e pendentes.
 - Resultado dos testes.
 - Resultado da inicialização da aplicação.
 - Resultado da validação dos endpoints.
+- Limitações e diferenças em relação ao plano aprovado.
+- Relatório de auditoria atualizado ao final da Fase 3.
+- Evidências reais dos testes, inspeções e comandos executados para cada critério.
+- Status final de cada finding: `corrigido`, `parcialmente corrigido` ou `pendente`.
+- Registro explícito de qualquer critério arquitetural pendente e da autorização do usuário para eventual conclusão parcial.
 
 ## Regras finais
 
@@ -167,4 +213,5 @@ Apresente:
 - Priorize segurança e preservação de comportamento.
 - Não aplique transformações sem justificativa técnica.
 - Não considere que a simples criação de pastas MVC significa que a arquitetura está correta.
+- Não considere a refatoração concluída se a arquitetura aprovada não tiver sido implementada ou se a divergência não tiver nova autorização.
 - Seja transparente sobre limitações e validações não realizadas.

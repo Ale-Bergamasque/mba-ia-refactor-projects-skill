@@ -311,6 +311,27 @@ A estrutura deve respeitar as convenções do projeto e das bibliotecas utilizad
 
 ## 6. Regras para separação de responsabilidades
 
+### 6.0. Plano arquitetural verificável
+
+Antes de modificar o código, a Skill deve registrar um plano específico para o projeto. O plano deve conter a arquitetura escolhida, as camadas realmente implementadas, suas responsabilidades, o mapeamento de componentes atuais para futuros componentes, as dependências permitidas, os findings relacionados e critérios de aceite funcionais, de segurança e arquiteturais.
+
+O plano não deve impor nomes de pastas ou tecnologias. Uma camada opcional, como Service ou Repository, pode ser omitida somente quando houver justificativa explícita. Se a camada for escolhida, sua implementação é obrigatória; não é suficiente manter a responsabilidade no componente legado com outro nome.
+
+Qualquer mudança relevante no plano, incluindo remover uma camada aprovada, manter persistência em uma camada que deveria ser apenas de domínio ou alterar a direção das dependências, exige nova autorização explícita do usuário.
+
+### 6.0.1. Critérios arquiteturais mínimos
+
+Ao final, verificar por evidências:
+
+- cada responsabilidade está na camada definida no plano;
+- Controllers coordenam HTTP e não executam persistência diretamente;
+- Services concentram regras de negócio complexas e não dependem de objetos HTTP;
+- Repositories isolam SQL/ORM quando previstos;
+- Models não acumulam responsabilidades de Service e Repository;
+- Views/Routes não concentram regras de negócio ou transações;
+- as dependências entre camadas seguem a direção aprovada;
+- não existe apenas uma renomeação ou redistribuição superficial para simular a arquitetura.
+
 ### 6.1. Regras de negócio
 
 Regras de negócio não devem ficar misturadas ao tratamento HTTP.
@@ -336,6 +357,8 @@ A Skill deve:
 - Respeitar o ORM existente, quando houver.
 - Preservar o esquema do banco sempre que possível.
 - Evitar mudanças desnecessárias em tabelas e relacionamentos.
+- Se o plano aprovar uma camada Repository, toda consulta, escrita, transação e detalhe específico do mecanismo de persistência deve ficar nessa camada ou em componentes internos subordinados a ela.
+- Se o projeto preservar Models como camada de persistência, registrar essa decisão no plano e não declarar uma arquitetura Models/Services/Repositories como implementada.
 
 ### 6.3. Validação
 
@@ -443,14 +466,15 @@ Sequência recomendada:
 
 1. Revisar o relatório de auditoria aprovado.
 2. Identificar os arquivos e responsabilidades afetados.
-3. Definir a estrutura MVC adequada ao projeto.
-4. Registrar o comportamento atual dos endpoints.
-5. Criar ou ajustar componentes de maneira incremental.
-6. Mover regras de negócio para componentes apropriados.
-7. Isolar persistência quando necessário.
-8. Corrigir problemas de segurança e qualidade priorizados.
-9. Executar testes e verificações após mudanças relevantes.
-10. Documentar alterações e limitações.
+3. Definir e apresentar o plano arquitetural verificável.
+4. Obter autorização para o plano.
+5. Registrar o comportamento atual dos endpoints.
+6. Criar ou ajustar componentes de maneira incremental.
+7. Mover regras de negócio para componentes apropriados.
+8. Isolar persistência conforme as camadas aprovadas.
+9. Corrigir problemas de segurança e qualidade priorizados.
+10. Executar testes funcionais, de segurança e arquiteturais após mudanças relevantes.
+11. Documentar alterações, rastreabilidade dos findings, diferenças do plano e limitações.
 
 Sempre que possível, preservar nomes públicos, caminhos de endpoints, formatos de resposta e contratos existentes.
 
